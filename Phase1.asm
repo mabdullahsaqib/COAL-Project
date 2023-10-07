@@ -2,7 +2,8 @@
 [org 0x0100]
 jmp start
 
-message: db '|' ; string to be printed
+message: db '@' ; string to be printed
+multiplier: dw 2
 ;--------------------------------------------------------------------
 ; subroutine to clear the screen
 ;--------------------------------------------------------------------
@@ -30,90 +31,74 @@ nextloc:	mov word [es:di], ax	; clear next char on screen
 ;--------------------------------------------------------------------
 ; subroutine to print a side of the square
 ;--------------------------------------------------------------------
-printstr:	push bp
-			mov bp, sp
-			push es
-			push ax
-			push cx
-			push si
-			push di
-			push bx
 
-			mov ax, 0xb800
-			mov es, ax				; point es to video base
-			mov bx, [bp+4]			; controls the dimensions of the side			
-			mov di, [bp+6]			; point di to the starting column	
-			mov cx, [bp+8]			; loop control variable
-			mov si, [bp+10]			; point si to string
+face:	push bp
+		mov bp, sp
+		push es
+		push ax
+		push cx
+		push si
+		push di
+		push bx
+		push dx
 		
-			mov ah, 0x07	        ; normal attribute fixed in ah
-			mov al, [si]	        ; load value in al
+		
+		mov dx, 6
+		
+		mov cx, 0xb800
+		mov es, cx				; point es to video base
+		;mov bx, [bp+4]			; controls the addition into di			
+		mov bx, 0
+		mov di, [bp+6]			; point di to the starting column	
+		mov ax, [bp+8]			; loop control variable
+		mov si, [bp+10]			; point si to string
+		
+		mov ch, 0x07	        ; normal attribute fixed in ah
+		mov cl, [si]	        ; load value in al
+
+next:
+mov ax, bx
+add ax,4
+mov bx, ax
+sub di, ax
+sub di, ax
+add di,268
+;sub di, 10
+
 nextchar:				
-			mov [es:di], ax			; show this char on screen
-			add di, bx				; move to next screen location	
-			loop nextchar			; repeat the operation cx times
-			
-			pop bx
-			pop di
-			pop si
-			pop cx
-			pop ax
-			pop es
-			pop bp
-			ret 8
+		mov [es:di], cx			; show this char on screen
+		add di, 2				; move to next screen location	
+		sub ax,1
+		jnz nextchar			; repeat the operation cx times
+		sub dx, 1
+		jnz next
+		
+		pop dx
+		pop bx
+		pop di
+		pop si
+		pop cx
+		pop ax
+		pop es
+		pop bp
+		ret 8
 ;--------------------------------------------------------------------
 ;subroutine to print a square on the screen
 ;--------------------------------------------------------------------
-square:
+horse:
 		mov ax, message
-		mov bx,10               ;move dimensions of a side in bx
+		mov bx,0               ;move dimensions of a side in bx
 		
 		push ax					; push address of message.. [bp+6]
 		push bx
 		
-		mov di,4880
+		mov di,4920
 		push di
 		mov  dx, 2
 		push dx
-		call printstr			; call the printstr subroutine
-		
-		
-	;	mov ax, message
-		push ax					; push address of message.. [bp+6]
-	;	mov bx,10
-		push bx
-		;push word [length]		; push message length .... [bp+4]	
-		add di,2640
-		push di
-		mov  dx, 2
-		push dx
-	
-		call printstr			; call the printstr subroutine
-
-	;	mov ax, message
-		push ax					; push address of message.. [bp+6]
-	;	mov bx,10
-		push bx
-		;push word [length]		; push message length .... [bp+4]	
-		mov di, 4880
-		push di
-		mov  dx, 264
-		push dx
-	
-		call printstr			; call the printstr subroutine
-
-     ;   mov ax, message
-		push ax					; push address of message.. [bp+6]
-	;	mov bx,10
-		push bx
-		;push word [length]		; push message length .... [bp+4]	
-		mov di, 4898
-		push di
-			mov  dx, 264
-		push dx
-		call printstr			; call the printstr subroutine
-		 
-		 ret
+		call face			; call the printstr subroutine
+			 
+		ret
 
 ;--------------------------------------------------------------------
 start:	
@@ -127,7 +112,7 @@ int 0x10
 
 call clrscr ; call the clrscr subroutine
 
-call square
+call horse
        
 		mov ax, 0x4c00 ; terminate program
 		int 0x21
