@@ -28,8 +28,7 @@ nextloc:	mov word [es:di], ax	; clear next char on screen
 			pop es
 			ret
 ;--------------------------------------------------------------------
-; subroutine to print a string at top left of screen
-; takes address of string and its length as parameters
+; subroutine to print a side of the square
 ;--------------------------------------------------------------------
 printstr:	push bp
 			mov bp, sp
@@ -42,17 +41,16 @@ printstr:	push bp
 
 			mov ax, 0xb800
 			mov es, ax				; point es to video base
-			mov di, [bp+6]			; point di to top left column
-			mov bx, [bp+4]						; es:di --> b800:0000
+			mov bx, [bp+4]			; controls the dimensions of the side			
+			mov di, [bp+6]			; point di to the starting column	
+			mov cx, [bp+8]			; loop control variable
 			mov si, [bp+10]			; point si to string
-			mov cx, [bp+8]			; load length of string in cx
-			mov ah, 0x07	; normal attribute fixed in al
-			
-			
-nextchar:	mov al, [si]			; load next char of string
+		
+			mov ah, 0x07	        ; normal attribute fixed in ah
+			mov al, [si]	        ; load value in al
+nextchar:				
 			mov [es:di], ax			; show this char on screen
-			add di, bx				; move to next screen location
-			;add si, 1				; move to next char in string			
+			add di, bx				; move to next screen location	
 			loop nextchar			; repeat the operation cx times
 			
 			pop bx
@@ -63,15 +61,16 @@ nextchar:	mov al, [si]			; load next char of string
 			pop es
 			pop bp
 			ret 8
-
+;--------------------------------------------------------------------
+;subroutine to print a square on the screen
 ;--------------------------------------------------------------------
 square:
 		mov ax, message
-		mov bx,10
+		mov bx,10               ;move dimensions of a side in bx
 		
 		push ax					; push address of message.. [bp+6]
 		push bx
-		;push word [length]		; push message length .... [bp+4]	
+		
 		mov di,4880
 		push di
 		mov  dx, 2
