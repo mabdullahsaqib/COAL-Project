@@ -221,15 +221,21 @@ printtrees:
 			push bx
 			push cx
 			mov cx,4
-			mov bx,[treelineposx]
-			mov ax,[treelineposy]
+			mov ax,[treelineposx]
+			mov bx,[treelineposy]
 			printtreeloop:
-			push ax
 			push bx
+			push ax
 			push treeline
 			call print
-			add ax,8
-			add bx,[bp+4]
+			add bx,8
+			add ax,[bp+4]
+			push cx
+			mov cx,320
+			xor dx,dx
+			div cx
+			mov ax,dx
+			pop cx
 			sub cx,1
 			jnz printtreeloop
 			pop cx
