@@ -32,9 +32,9 @@ print:
 	;calculate start pos of di
 	mov ax,[bp+8]
 	cmp word ax,[printmasky]
-	jnl printskipcalculatedi
+	jnl printskipdi
 	mov ax,[printmasky]
-	printskipcalculatedi:
+	printskipdi:
 	mov cx,320
 	xor dx,dx
 	mul cx
@@ -79,8 +79,8 @@ print:
 			add si,1
 			jmp printskip2
 		printskip:
-			movsb
-			jmp printskip4
+				movsb
+				jmp printskip4
 			printskip5:
 			add di,1
 			add si,1
@@ -94,7 +94,7 @@ print:
 				sub di,320
 				printskip2:
 					cmp di,64000
-					jne printloop
+	jne printloop
 	printending:
 	pop es
 	pop si
@@ -178,6 +178,7 @@ mountainposy:dw 20
 printmountain:
 			  push ax
 			  mov ax,[mountainposx]
+			  
 			  push word [mountainposy]
 			  push word ax
 			  push mountain
@@ -353,13 +354,15 @@ mov es,ax
 xor di,di
 mov ax,60
 mov cx,[horseframerate]
+push ax
 call printbackground
-mov word [printmasky],47
+call printbuffer
+mov word [printmasky],46
 loop:
     add ax,1
 	push ax                                                                                                  
 	call printbackground
-    call printfence
+	call printfence
 	call printroad
 	call printcar
 	call printhorse
