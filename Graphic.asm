@@ -1,6 +1,5 @@
 [org 0x0100]
 jmp start
-
 ;print function takes 3 parameters
 ;1. array to print bp+4
 ;2. x displacement bp+6
@@ -44,9 +43,9 @@ print:
 		cmp al,0
 		je printending
 		cmp al,255
-		je printskip4
+		je printskip5
 		cmp al,254
-		jne printskip
+		jne printskip 
 			mov ax,di                              
 			mov cx,320
 			xor dx,dx 
@@ -66,11 +65,12 @@ print:
 			add si,1
 			jmp printskip2
 		printskip:
-			mov al,[si]
-			mov [es:di],al
-			printskip4:
-				add di,1
-				add si,1
+			movsb
+			jmp printskip4
+			printskip5:
+			add di,1
+			add si,1
+				printskip4:
 				mov ax,di
 				mov cx,320
 				xor dx,dx
@@ -179,7 +179,7 @@ printmountain:
 horseposx:dw 255
 horseposy:dw 70
 horseframe:dw 0
-horseframerate:dw 3
+horseframerate:dw 2
 printhorse:
 			push word [horseposy]
 			push word [horseposx]
@@ -269,6 +269,27 @@ printsky:
 		call print
 		pop ax
 		ret
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+carposx: dw 20
+carposy: dw 90
+printcar:
+		push word[carposy]
+		push word[carposx]
+		push car
+		call print
+		ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+printbackground:
+			push bp
+			mov bp,sp
+			call printsky
+			call printsun
+			call printmountain
+			push word[bp+4]
+		    call printtrees
+			pop bp
+			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbuffer:
 			push es
@@ -291,15 +312,6 @@ printbuffer:
 			pop es
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-carposx: dw 20
-carposy: dw 90
-printcar:
-		push word[carposy]
-		push word[carposx]
-		push car
-		call print
-		ret
-;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
 mov bx,0x8000
 mov ss,bx
@@ -315,20 +327,17 @@ mov es,ax
 xor di,di
 mov ax,60
 mov cx,[horseframerate]
-loop:                                                                                                  
-	call printsky
-	call printsun
-    call printmountain
-	add ax,1
-	push ax
-	call printtrees
+loop:
+    add ax,1
+	push ax                                                                                                  
+	call printbackground
     call printfence
 	call printroad
 	call printcar
 	call printhorse
-	add word[roadposx],5
-	add word[fenceposx],5
-	add word[treelineposx],1
+	add word[roadposx],10
+	add word[fenceposx],10
+	add word[treelineposx],2
 	sub cx,1
 	cmp cx,0
 	jne skip0
