@@ -360,7 +360,7 @@ printbuffer:
 start:
 mov bx,0x8000
 mov ss,bx
-mov bx,0x9000 ; buffer is stored near end of memory at 9000. 
+mov bx,0x8800 ; buffer is stored near end of memory at 9000. 
               ; No other data is stored there as 9FFF is end of memory
 			  ; and 9000 gives us exactly 64k bytes for buffer
 			  ; (with some padding)
@@ -374,8 +374,7 @@ mov ax,60
 mov cx,[horseframerate]
 push ax
 call printbackground
-call printbuffer
-mov word [printmasky],46
+mov word [printmasky],47
 loop:
     add ax,1
 	push ax                                                                                                  

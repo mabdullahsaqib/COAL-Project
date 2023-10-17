@@ -375,7 +375,7 @@
    375 000002CC 50                      push ax
    376 000002CD E892FF                  call printbackground
    377 000002D0 E8A5FF                  call printbuffer
-   378 000002D3 C706[4D03]2E00          mov word [printmasky],46
+   378 000002D3 C706[4D03]2F00          mov word [printmasky],47
    379                                  loop:
    380 000002D9 83C001                      add ax,1
    381 000002DC 50                      	push ax                                                                                                  
