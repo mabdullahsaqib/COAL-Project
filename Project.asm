@@ -70,7 +70,7 @@ print:
 						add ax,[bp+8]
 						mov cx,[bp-4]
 						add cx,[bp+6]
-						mov dx,132
+						mov dx,[ResX]
 						mul dx
 						add ax,cx
 						shl ax,1
@@ -184,7 +184,7 @@ printsaddle:
 		call print
 		ret
 ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-printocean:
+printsky:
 		push di
 		push ax
 		push cx
@@ -312,7 +312,7 @@ start:
 		mov es,ax
 		call clrscr
 		call printground
-		call printocean
+		call printsky
 		call printsun
 		call printmountain
 		call printclouds
