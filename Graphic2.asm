@@ -43,21 +43,21 @@ print:
 	add ax,cx
 	mov di,ax
 	;calculate start pos of si
-	mov cx,[bp+10]
-	mov si,[bp+4]
-	mov ax,[printmasky]
+	mov cx,[bp+10] ;move length of array into cx
+	mov si,[bp+4] ;move array into si
+	mov ax,[printmasky] ; check if printmasky-y >= 0
 	sub ax,[bp+8]
 	cmp ax,0
-	jng printloop
-	mov bx,[bp-2]
-	inc bx
+	jng printloop ;if printmasky-y>=0 then we go to straight to printloop as no rows need to be skipped
+	mov bx,[bp-2] ;if printmasky-y<0 then we need to skip some rows, first we check if (printmasky-y)*(horizontal res) < total pixels
+	inc bx       
 	xor dx,dx
 	mul bx
-	mov bx,[bp+10]
-	cmp ax,bx
-	jae printending
+	cmp ax,cx ;cx has total amount of pixels in image, if skip amount is greater than or equal to it we just end printing otherwise we go to print loop while skipping some pixels
+	jae printending 
 	add si,ax
 	sub cx,ax
+	;print every byte
 	printloop:
 		mov al,[si] ;mov array element into al for checking transparency/delimiters
 		cmp al,255 ;transparent
@@ -360,7 +360,7 @@ printbuffer:
 start:
 mov bx,0x8000
 mov ss,bx
-mov bx,0x8800 ; buffer is stored near end of memory at 9000. 
+mov bx,0x9000 ; buffer is stored near end of memory at 9000. 
               ; No other data is stored there as 9FFF is end of memory
 			  ; and 9000 gives us exactly 64k bytes for buffer
 			  ; (with some padding)
@@ -374,6 +374,7 @@ mov ax,60
 mov cx,[horseframerate]
 push ax
 call printbackground
+call printbuffer
 mov word [printmasky],47
 loop:
     add ax,1
