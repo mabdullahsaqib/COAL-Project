@@ -45,11 +45,11 @@ print:
 	;calculate start pos of si
 	mov cx,[bp+10] ;move length of array into cx
 	mov si,[bp+4] ;move array into si
-	mov ax,[printmasky] ; check if printmasky-y >= 0
+	mov ax,[printmasky] ; check if printmasky-y <= 0
 	sub ax,[bp+8]
 	cmp ax,0
-	jng printloop ;if printmasky-y>=0 then we go to straight to printloop as no rows need to be skipped
-	mov bx,[bp-2] ;if printmasky-y<0 then we need to skip some rows, first we check if (printmasky-y)*(horizontal res) < total pixels
+	jng printloop ;if printmasky-y<=0 then we go to straight to printloop as no rows need to be skipped
+	mov bx,[bp-2] ;if printmasky-y>0 then we need to skip some rows, first we check if (printmasky-y)*(horizontal res) < total pixels
 	inc bx       
 	xor dx,dx
 	mul bx
@@ -348,8 +348,7 @@ printbuffer:
 			mul cx
 			mov cx, [buffer]
 			mov ds, cx
-			xor si, si
-			add si,ax
+			mov si,ax
 			mov cx, 0xA000
 			mov es, cx
 			xor di, di
