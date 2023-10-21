@@ -394,11 +394,8 @@ mov bx,0x9000 ; buffer is stored near end of memory at 9000.
 mov word[buffer],bx
 mov ax,13h
 int 0x10
-mov ax,0xA000
-mov es,ax
-xor di,di
 mov ax,60
-mov cx,[horseframerate]
+mov cx,[horseframerate]; how many cycles until we switch to next horse image
 push ax
 call printbackground
 call printbuffer
@@ -416,20 +413,19 @@ loop:
 	add word[roadposx],10
 	add word[fenceposx],10
 	add word[treelineposx],2
-	sub cx,1
-	cmp cx,0 ;cx is used to check horseframes (reset to 0 after 6 cycles)
-	jne skip0
-	mov cx,[horseframerate]
-	add word[horseframe],1
-	cmp word[horseframe],6
-	jne skip0
-	mov word[horseframe],0
+	sub cx,1 ;cx is used to check horseframes (reset to 0 after 6 cycles)
+	jnz skip0
+		mov cx,[horseframerate]
+		add word[horseframe],1
+		cmp word[horseframe],6
+		jne skip0
+		mov word[horseframe],0
 	skip0:
 		cmp word[roadposx],320
 		jne skip
 		mov word[roadposx],0
 	skip:
-		cmp word[fenceposx],320;
+		cmp word[fenceposx],320
 		jne skip1
 		mov word[fenceposx],0
 	skip1:
