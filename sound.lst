@@ -14,7 +14,7 @@
     14 0000000F 8A84[0200]              	mov al,[sound_data+si]
     15 00000013 EE                      	out dx,al
     16 00000014 FF06[0000]              	inc word[sound_index]
-    17 00000018 B9FF2A                  	mov cx,0x2AFF
+    17 00000018 B9FF2F                  	mov cx,0x2FFF
     18                                  	delay:
     19 0000001B E2FE                    		loop delay
     20 0000001D 813E[0000]49C9          	cmp word[sound_index], 51529

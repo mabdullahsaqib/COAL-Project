@@ -14,7 +14,7 @@ loop:
 	mov al,[sound_data+si]
 	out dx,al
 	inc word[sound_index]
-	mov cx,0x2AFF
+	mov cx,0x2FFF
 	delay:
 		loop delay
 	cmp word[sound_index], 51529
