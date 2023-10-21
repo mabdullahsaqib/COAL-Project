@@ -1,0 +1,217 @@
+     1                                  [org 0x0100]
+     2 00000000 E90602                  jmp start
+     3 00000003 404040403D2D3A2D2D-     rabbit : db '@@@@=-:---.@@@@@@@@:---:-=]@@@@@-=.::.-+@@@@@@+:.::.+:]@@@@@@.=:==--.....:--=-:+.]@@@@@@.=-@@..@@@@@@..@.+-]@@@.:==@@@+*=+@@@@*=*-@@.*::]@@::++--.@@:.@+**+@::@@:--*:-.]@@:::+:-@@@@@.--++:-@@@@@.-=+]@+:@@@@.@@:.@@@@@@@@@@.:@@.=-]@@--::+:+-:==-@@@@@@-==:++-+]',0
+     3 0000000C 2D2E40404040404040-
+     3 00000015 403A2D2D2D3A2D3D5D-
+     3 0000001E 40404040402D3D2E3A-
+     3 00000027 3A2E2D2B4040404040-
+     3 00000030 402B3A2E3A3A2E2B3A-
+     3 00000039 5D4040404040402E3D-
+     3 00000042 3A3D3D2D2D2E2E2E2E-
+     3 0000004B 2E3A2D2D3D2D3A2B2E-
+     3 00000054 5D4040404040402E3D-
+     3 0000005D 2D40402E2E40404040-
+     3 00000066 40402E2E402E2B2D5D-
+     3 0000006F 4040402E3A3D3D4040-
+     3 00000078 402B2A3D2B40404040-
+     3 00000081 2A3D2A2D40402E2A3A-
+     3 0000008A 3A5D40403A3A2B2B2D-
+     3 00000093 2D2E40403A2E402B2A-
+     3 0000009C 2A2B403A3A40403A2D-
+     3 000000A5 2D2A3A2D2E5D40403A-
+     3 000000AE 3A3A2B3A2D40404040-
+     3 000000B7 402E2D2D2B2B3A2D40-
+     3 000000C0 404040402E2D3D2B5D-
+     3 000000C9 402B3A404040402E40-
+     3 000000D2 403A2E404040404040-
+     3 000000DB 404040402E3A40402E-
+     3 000000E4 3D2D5D40402D2D3A3A-
+     3 000000ED 2B3A2B2D3A3D3D2D40-
+     3 000000F6 40404040402D3D3D3A-
+     3 000000FF 2B2B2D2B5D00       
+     4                                  
+     5 00000105 8400                    ResX: dw 132
+     6 00000107 2B00                    ResY: dw 43
+     7                                  ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     8                                  ;print takes 5 parameters
+     9                                  ;1.pointer to the array containing the formatted shape bp+4
+    10                                  ;3.x displacement bp+6
+    11                                  ;4.y displacement bp+8          
+    12                                  ;6.color bp+10     				
+    13                                  print:
+    14 00000109 55                      		    push bp
+    15 0000010A 89E5                    			mov bp,sp
+    16 0000010C 83EC06                  			sub sp,6
+    17 0000010F 56                      			push si
+    18 00000110 57                      			push di
+    19 00000111 52                      			push dx
+    20 00000112 51                      			push cx
+    21 00000113 53                      			push bx
+    22 00000114 50                      			push ax
+    23 00000115 8A7E0A                  			mov byte bh,[bp+10]
+    24 00000118 BE0000                  			mov si,0
+    25 0000011B BF0000                  			mov di,0
+    26 0000011E C746FE0000              			mov word [bp-2],0  ;i
+    27 00000123 C746FC0000              			mov word [bp-4],0  ;j
+    28                                  			;------------- find length of string
+    29 00000128 1E                      			push ds
+    30 00000129 07                      			pop es
+    31 0000012A 8B7E04                  			mov di,[bp+4]
+    32 0000012D B9FFFF                  			mov cx,0xffff
+    33 00000130 30C0                    			xor al,al
+    34 00000132 F2AE                    			repne scasb
+    35 00000134 B8FFFF                  			mov ax,0xffff
+    36 00000137 29C8                    			sub ax,cx
+    37 00000139 48                      			dec ax
+    38 0000013A 8946FA                  			mov [bp-6],ax
+    39                                  			;------------------
+    40 0000013D B800B8                  			mov ax,0xb800
+    41 00000140 8EC0                    			mov es,ax
+    42 00000142 BF0000                  			mov di,0
+    43                                  			printloop:
+    44 00000145 3976FA                  				cmp word [bp-6],si
+    45 00000148 7646                    				jna printloopend
+    46 0000014A 8B7E04                  				mov di,[bp+4]
+    47 0000014D 01F7                    				add di,si
+    48 0000014F 8A1D                    				mov bl,[di]  
+    49 00000151 80FB5D                  				cmp bl,']'
+    50 00000154 750E                    				jne printloopskip
+    51 00000156 8346FE01                					add word [bp-2],1  ;move to next row
+    52 0000015A C746FC0000              					mov word [bp-4],0 ;move to start of column
+    53 0000015F 83C601                  					add si,1
+    54 00000162 EBE1                    					jmp printloop
+    55                                  				printloopskip:
+    56 00000164 80FB40                  					cmp bl,'@'
+    57 00000167 741A                    					je printloopskip2
+    58 00000169 8B46FE                  						mov ax,[bp-2]
+    59 0000016C 034608                  						add ax,[bp+8]
+    60 0000016F 8B4EFC                  						mov cx,[bp-4]
+    61 00000172 034E06                  						add cx,[bp+6]
+    62 00000175 BA8400                  						mov dx,132
+    63 00000178 F7E2                    						mul dx
+    64 0000017A 01C8                    						add ax,cx
+    65 0000017C D1E0                    						shl ax,1
+    66 0000017E 89C7                    						mov di,ax
+    67 00000180 26891D                  						mov word [es:di],bx
+    68                                  				printloopskip2:
+    69 00000183 8346FC01                					add word [bp-4],1
+    70 00000187 83C601                  					add si,1
+    71 0000018A 81FF401F                					cmp di,8000
+    72 0000018E 75B5                    				jne printloop
+    73                                  			printloopend:
+    74 00000190 58                      			pop ax
+    75 00000191 5B                      			pop bx
+    76 00000192 59                      			pop cx
+    77 00000193 5A                      			pop dx
+    78 00000194 5F                      			pop di
+    79 00000195 5E                      			pop si
+    80 00000196 83C406                  			add sp,6
+    81 00000199 5D                      			pop bp
+    82 0000019A C20800                  		    ret 8
+    83                                  ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    84                                  delay:
+    85 0000019D 51                      		push cx
+    86 0000019E B9FFFF                  		mov cx,0xFFFF
+    87                                  		delayloop:
+    88 000001A1 83E901                  				 sub cx,1
+    89 000001A4 83F900                  				 cmp cx,0
+    90 000001A7 75F8                    				 jne delayloop
+    91 000001A9 59                      	     pop cx
+    92 000001AA C3                      		 ret
+    93                                  ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    94                                  clrscr:
+    95 000001AB 57                      		push di
+    96 000001AC 50                      		push ax
+    97 000001AD 51                      		push cx
+    98 000001AE 06                      		push es
+    99 000001AF B800B8                  		mov ax,0xb800
+   100 000001B2 8EC0                    		mov es,ax
+   101 000001B4 31FF                    		xor di,di
+   102 000001B6 B82007                  		mov ax,0x0720
+   103 000001B9 B97017                  		mov cx,6000
+   104 000001BC FC                      		cld
+   105 000001BD F3AB                    		rep stosw
+   106 000001BF 07                      		pop es
+   107 000001C0 59                      		pop cx
+   108 000001C1 58                      		pop ax
+   109 000001C2 5F                      		pop di
+   110 000001C3 C3                      		ret
+   111                                  ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   112 000001C4 2D00                    rabbitposx: dw 45
+   113 000001C6 0000                    rabbitposy: dw 0
+   114                                  printrabbit:
+   115 000001C8 55                      		    push bp
+   116 000001C9 89E5                    			mov bp,sp
+   117 000001CB 53                      			push bx
+   118 000001CC 8B5E04                  			mov bx, [bp+4]
+   119 000001CF 891E[C601]              			mov [rabbitposy], bx
+   120 000001D3 5B                      			pop bx
+   121 000001D4 5D                      			pop bp
+   122                                  			
+   123 000001D5 6A77                    		push byte 0b01110111
+   124 000001D7 FF36[C601]              		push word [rabbitposy]
+   125 000001DB FF36[C401]              		push word [rabbitposx]
+   126 000001DF 68[0300]                		push word rabbit
+   127 000001E2 E824FF                  		call print
+   128 000001E5 C20200                  		ret 2
+   129                                  
+   130                                  ;-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   131 000001E8 50                      kbisr:		push ax
+   132 000001E9 06                      			push es
+   133                                  	
+   134 000001EA B800B8                  			mov ax, 0xb800
+   135 000001ED 8EC0                    			mov es, ax						; point es to video memory
+   136                                  
+   137                                  
+   138 000001EF E460                    			in al, 0x60						; read a char from keyboard port, scancode
+   139                                  	
+   140 000001F1 3C48                    			cmp al, 0x48					; is the key left shift
+   141 000001F3 750D                    			jne nomatch						; leave interrupt routine
+   142 000001F5 E8B3FF                              call clrscr
+   143 000001F8 A1[C601]                			mov ax, [rabbitposy]
+   144 000001FB 83E803                              sub ax , 3
+   145 000001FE 50                                  push ax
+   146 000001FF E8C6FF                              call printrabbit
+   147                                              
+   148 00000202 B020                    nomatch:		mov al, 0x20
+   149 00000204 E620                    			out 0x20, al					; send EOI to PIC
+   150                                  			
+   151 00000206 07                      			pop es
+   152 00000207 58                      			pop ax
+   153                                  
+   154                                  			;************************************
+   155                                  			; TEST YOUR CONCEPTS
+   156                                  			; WHAT IS EXACT FUNCTIONALITY OF IRET????
+   157                                  
+   158 00000208 CF                      			iret
+   159                                  ;-------------------------------------------------------
+   160                                  
+   161                                  
+   162                                  start:
+   163 00000209 B400                    	mov AH,0x00
+   164 0000020B B054                    	mov al, 0x54
+   165 0000020D CD10                    	int 0x10
+   166                                  
+   167 0000020F B800B8                  		mov ax,0xb800
+   168 00000212 8EC0                    		mov es,ax
+   169 00000214 E894FF                  		call clrscr
+   170 00000217 BB1E00                  		mov bx, 30
+   171 0000021A 53                      		push bx
+   172 0000021B E8AAFF                  		call printrabbit
+   173                                  
+   174 0000021E 31C0                    			xor ax, ax
+   175 00000220 8EC0                    			mov es, ax					; es=0, point es to IVT base
+   176                                  	
+   177 00000222 FA                      			cli						; disable interrupts
+   178                                  
+   179 00000223 26C7062400[E801]        			mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
+   180 0000022A 268C0E2600              			mov [es:9*4+2], cs			; store segment at n*4+2
+   181                                  
+   182 0000022F FB                      			sti						; enable interrupts 
+   183                                  
+   184 00000230 EBFE                    l1:		 	jmp l1						; infinite loop 
+   185                                  
+   186                                  		
+   187 00000232 B8004C                  mov ax,0x4c00
+   188 00000235 CD21                    int 0x21
+   189                                  
