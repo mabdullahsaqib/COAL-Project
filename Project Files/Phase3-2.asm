@@ -336,6 +336,7 @@ printbackground:
 			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbuffer:
+			cli
 			push es
 			push di
 			push ds
@@ -365,6 +366,7 @@ printbuffer:
 			pop ds
 			pop di
 			pop es
+			sti
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
@@ -444,7 +446,7 @@ cli						; disable interrupts
 
 		mov al, 0x36    ; Set the command byte for Channel 0, 16-bit binary, square wave
 		out 0x43, al    ; Send the command byte
-		mov ax, 340    ; Set the desired frequency
+		mov ax, 300    ; Set the desired frequency
 		out 0x40, al    ; Send the low byte of the divisor
 		mov al, ah      ; Get the high byte of the divisor
 		out 0x40, al    ; Send the high byte of the divisor

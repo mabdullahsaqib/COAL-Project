@@ -4,27 +4,49 @@ jmp start
 timer:		push si
 			push ax
 			push dx
-			mov byte[es:di],2
-			add di,1
+			push es
+			mov dx,[sound_buffer]
+			mov es,dx
 			;send DSP command 10h
 			mov dx, 22ch
 			mov al,10h
 			out dx,al
 			;send byte audio sample
 			mov si, [sound_index]
-			mov al,[sound_data+si]
+			mov al,[es:si]
 			out dx,al
 			add word[sound_index],1
-			cmp word[sound_index], 51000
+			cmp word[sound_index], 50000
 			jne timerskip
 			mov word[sound_index],0
 			timerskip:
+			pop es
 			pop dx
 			pop ax
 			pop si
-			jmp far[cs:timerinterrupt]
+			jmp far [cs:timerinterrupt]
 start:
 cli
+			;read sound data from file and store in sound_buffer segment
+		mov ah,3dh ; open file
+		mov al,0
+		lea dx,filename
+		int 21h
+		mov [filehandle],ax
+		;read file and write bytes to 
+		mov ah,3fh
+		mov cx,50000
+		mov bx,[filehandle]
+		mov dx,[sound_buffer]
+		mov ds,dx
+		xor dx,dx
+		int 21h
+		;close file
+		mov ax,cs
+		mov ds,ax
+		mov ah,3eh
+		mov bx,[filehandle]
+		int 21h
 		xor ax, ax
 		mov es, ax					; es=0, point es to IVT base
 		mov ax,[es:1ch*4]
@@ -63,6 +85,7 @@ int 0x21
 	
 section .data
 timerinterrupt:dw 0,0
-sound_data: 
-		incbin "kingsv.wav" ;51,529 bytes
+sound_buffer: dw 8000
 sound_index: dw 0
+filename: db 'kingsv.wav',0
+filehandle: dw 0
