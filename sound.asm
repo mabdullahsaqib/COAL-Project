@@ -1,6 +1,9 @@
 [org 0x0100]
 section .text
+
 start:
+mov ax,13h
+int 0x10
 loop:
 	; send DSP command 10h
 	mov dx, 22ch
@@ -11,10 +14,10 @@ loop:
 	mov al,[sound_data+si]
 	out dx,al
 	inc word[sound_index]
-	cmp word[sound_index], 51529
 	mov cx,0x2AFF
 	delay:
 		loop delay
+	cmp word[sound_index], 51529
 	jb loop
 	mov word [sound_index],0
 	jmp start

@@ -1,0 +1,56 @@
+     1                                  [org 0x0100]
+     2 00000000 EB2C                    jmp start
+     3 00000002 56                      timer:		 push si
+     4 00000003 50                      			 push ax
+     5 00000004 52                      			 push dx
+     6                                  			 ;send DSP command 10h
+     7 00000005 BA2C02                  			 mov dx, 22ch
+     8 00000008 B010                    			 mov al, 10h
+     9 0000000A EE                      			 out dx,al
+    10                                  			 ;send byte audio sample
+    11 0000000B 8B36[0400]              			 mov si, [sound_index]
+    12 0000000F 8A84[0600]              			 mov al,[sound_data+si]
+    13 00000013 EE                      			 out dx,al
+    14 00000014 FF06[0400]              			 inc word[sound_index]
+    15 00000018 813E[0400]49C9          			 cmp word[sound_index],51529
+    16 0000001E 7506                    			 jne timerskip
+    17 00000020 C706[0400]0000          			 mov word[sound_index],0
+    18                                  			 timerskip:
+    19 00000026 5A                      			 pop dx
+    20 00000027 58                      			 pop ax
+    21 00000028 5E                      			 pop si
+    22 00000029 2EFF2E[0000]            			 jmp far[cs:timerinterrupt]
+    23                                  start:
+    24 0000002E B81300                  mov ax,13h
+    25 00000031 CD10                     int 0x10
+    26 00000033 FA                      cli
+    27 00000034 26A17000                		mov ax,[es:1ch*4]
+    28 00000038 A3[0000]                		mov word [timerinterrupt],ax
+    29 0000003B 26A17200                		mov ax,[es:1ch*4+2]
+    30 0000003F A3[0200]                		mov word [timerinterrupt+2],ax
+    31 00000042 26C7067000[0200]        		mov word[es:1ch*4],timer
+    32 00000049 268C0E7200              		mov [es:1ch*4+2],cs
+    33 0000004E B036                    		mov al, 0x36    ; Set the command byte for Channel 0, 16-bit binary, square wave
+    34 00000050 E643                    		out 0x43, al    ; Send the command byte
+    35 00000052 B81400                  		mov ax, 20     ; Set the desired frequency
+    36 00000055 E640                    		out 0x40, al    ; Send the low byte of the divisor
+    37 00000057 88E0                    		mov al, ah      ; Get the high byte of the divisor
+    38 00000059 E640                    		out 0x40, al
+    39 0000005B FB                      sti
+    40                                  loop1:
+    41 0000005C EBFE                         jmp loop1
+    42                                  
+    43 0000005E FA                      cli	
+    44 0000005F A1[0000]                		mov ax,[timerinterrupt]
+    45 00000062 26A37000                		mov word [es:1ch*4],ax
+    46 00000066 A1[0200]                		mov ax,[timerinterrupt+2]
+    47 00000069 26A37200                		mov word [es:1ch*4+2],ax
+    48 0000006D FB                      sti
+    49 0000006E B8004C                  mov ax,0x4c00
+    50 00000071 CD21                    int 0x21
+    51                                  	
+    52                                  section .data
+    53 00000000 00000000                timerinterrupt:dw 0,0
+    54 00000004 0000                    sound_index: dw 0
+    55                                  sound_data: 
+    56 00000006 <bin C949h>             		incbin "kingsv.wav" ;51,529 bytes
