@@ -314,14 +314,144 @@ printcar:
 		call print
 		ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+bottomstartrow:dw 131
+printbottom:
+			push ax
+			push cx
+			push dx
+			push di
+			push si
+			push es
+			mov ax,[buffer]
+			mov es,ax
+			mov ax,[bottomstartrow]
+			xor dx,dx
+			mov cx,320
+			mul cx
+			mov di,ax
+			bottomloop:
+					  mov byte[es:di],0x0B
+					  inc di
+					  cmp di,64000
+					  jne bottomloop
+			pop es
+			pop si
+			pop di
+			pop dx
+			pop cx
+			pop ax
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 rabbitposx: dw 150
 rabbitposy: dw 180
+rabbitjumpheight: dw 153
+rabbitmove: db 0 ;rabbitmove is used to check current state of rabbit
+				 ;0=rabbit can jump (not jumping,falling or scrolling down), this is the only state where interrupt can do anything
+				 ;1=rabbit is jumping
+				 ;2=bottom is scrolling down
+				 ;3=rabbit is falling (dying). Gamestate is set to 0 after this and cant be reset until program runs again
+Gamestate: db 1
 printrabbit:
 			push word[rabbitsize]
 			push word[rabbitposy]
 			push word[rabbitposx]
 			push rabbit
 			call print
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+ 
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+globalbrickpos:dw 116
+brick1xpos:dw 135
+brick2xpos:dw 135
+brick3xpos:dw 135
+
+;bp+4 has location, bp+6 has color
+brickprintloop:
+				push bp
+				mov bp,sp
+				push bx
+				push cx
+				push dx
+				push di
+				push es
+				mov bx,[buffer]
+				mov es,bx
+				mov di,[bp+4]
+				mov bx,5
+				mov dh,[bp+6]
+				brickl1:
+						mov cx,60
+						brickl2:	
+								mov [es:di],dh
+								add di,1
+								loop brickl2
+						add di,320
+						sub di,60
+						sub bx,1
+						jnz brickl1
+				pop es
+				pop di
+				pop dx
+				pop cx
+				pop bx
+				pop bp
+				ret 4
+printbricks:
+			push ax
+			push bx
+			push cx
+			push dx
+			push di
+			push si
+			push es
+			
+			mov ax,[globalbrickpos]
+			xor dx,dx
+			mov cx,320
+			mul cx
+			add ax,[brick1xpos]
+			push byte 0x0C
+			push ax
+			call brickprintloop
+			
+			mov ax,[globalbrickpos]
+			add ax,27
+			xor dx,dx
+			mov cx,320
+			mul cx
+			add ax,[brick2xpos]
+			push byte 0x0C
+			push ax
+			call brickprintloop
+			
+			mov ax,[globalbrickpos]
+			add ax,54
+			xor dx,dx
+			mov cx,320
+			mul cx
+			add ax,[brick2xpos]
+			push byte 0x0C
+			push ax
+			call brickprintloop
+			
+			mov ax,[globalbrickpos]
+			add ax,81
+			xor dx,dx
+			mov cx,320
+			mul cx
+			add ax,[brick3xpos]
+			push byte 0x0C
+			push ax
+			call brickprintloop
+			
+			pop es
+			pop si
+			pop di
+			pop dx
+			pop cx
+			pop bx
+			pop ax
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbackground:
@@ -373,7 +503,9 @@ kbisr:		push ax
 			in al, 0x60						; read a char from keyboard port, scancode
 			cmp al, 0x48					; is the key up
 			jne nomatch						; leave interrupt routine 
-			sub word[rabbitposy],10
+			cmp byte[rabbitmove],0
+			jne nomatch
+			mov byte[rabbitmove],1
             
 nomatch:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
@@ -381,7 +513,8 @@ nomatch:	mov al, 0x20
 			jmp far[cs:keyboardinterrupt]
 			iret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-timer:		push si
+ timer:		
+			push si
 			push ax
 			push dx
 			push es
@@ -452,6 +585,7 @@ cli						; disable interrupts
 		mov al, ah      ; Get the high byte of the divisor
 		out 0x40, al    ; Send the high byte of the divisor
 sti						; enable interrupts 
+
 mov bx,[stack_buffer]
 mov ss,bx
 mov ax,13h
@@ -464,13 +598,16 @@ call printbuffer
 mov word [printmasky],47
 loop:
     add ax,1
-	push ax                                                                                                  
-	call printbackground ;print everything
+	push ax         
+	;print everything
+	call printbackground
+	call printbottom
+	call printbricks
+	call printrabbit
 	call printfence
 	call printroad
 	call printcar
 	call printhorse
-	call printrabbit
 	;set values for next loop
 	add word[roadposx],10
 	add word[fenceposx],10
@@ -495,10 +632,38 @@ loop:
 		jne skip2
 		mov word[treelineposx],0
     skip2:
+	
+		cmp byte[rabbitmove],0
+		je skip4
+		cmp byte[rabbitmove],1
+		je rabbitjump
+		cmp byte[rabbitmove],2
+		je scrolldown
+		jmp skip4
+		scrolldown:
+					add word[rabbitposy],1
+					add word[globalbrickpos],1
+					cmp word[rabbitposy],180
+					jc scrolldownskip
+					mov byte[rabbitmove],0
+					mov byte[globalbrickpos],116
+					scrolldownskip:
+					jmp skip4
+		rabbitjump:
+					sub word[rabbitposy],3
+					
+					mov bx,[rabbitjumpheight]
+					cmp word[rabbitposy],bx
+					ja  rabbitjumpskip ;dont change state unless posy>=jumpheight
+					mov byte[rabbitmove],2
+					rabbitjumpskip:
+					jmp skip4
+	skip4:	
 	;print the buffer
 		call printbuffer
 	jmp loop
-
+;unhook all buffers to return control to system
+ending:
 mov ax,[keyboardinterrupt]
 mov word [es:9*4],ax
 mov ax,[keyboardinterrupt+2]
@@ -507,7 +672,6 @@ mov ax,[timerinterrupt]
 mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
 mov word [es:1ch*4+2],ax
-ending:
 mov ax,0x4c00
 int 0x21
 section .data
@@ -552,6 +716,7 @@ carsize:dw 3026
 
 rabbit: db 255,255,255,255,255,255,161,160,160,25,255,255,255,255,255,255,255,255,255,255,255,255,25,161,161,158,255,255,255,255,254,255,255,255,255,255,158,91,91,91,91,137,26,255,255,255,255,255,255,255,255,155,65,91,91,91,66,133,255,255,255,254,255,255,255,255,255,156,91,90,87,88,91,137,255,255,255,255,255,255,255,25,65,90,88,88,91,255,155,255,255,255,254,255,255,255,255,255,255,135,91,88,88,88,91,134,255,255,255,255,255,255,136,91,87,88,88,91,134,255,255,255,255,254,255,255,255,255,255,255,255,255,90,89,87,157,135,255,255,28,28,255,26,135,157,88,88,91,160,255,255,255,255,255,254,255,255,255,255,255,255,255,157,89,133,160,90,15,15,15,15,15,15,15,15,29,134,157,89,155,255,255,255,255,255,254,255,255,255,255,255,255,255,255,134,91,15,15,15,15,15,15,15,15,15,15,15,15,90,181,255,255,255,255,255,255,254,255,255,255,255,255,255,255,160,92,15,15,28,28,15,15,15,15,15,15,7,29,15,15,91,134,255,255,255,255,255,254,255,255,255,255,255,255,160,91,15,15,26,180,180,26,15,15,15,15,156,180,181,29,15,91,91,134,255,255,255,255,254,255,255,255,255,155,133,90,15,15,15,156,7,100,156,15,15,15,15,133,100,175,27,15,15,91,88,156,155,255,255,254,255,255,255,255,255,160,158,133,29,15,15,156,27,15,29,26,26,30,30,26,26,15,15,28,133,159,135,255,255,255,254,255,255,255,155,131,161,91,15,30,15,15,15,15,30,203,180,180,180,15,15,15,15,15,30,15,91,135,255,154,255,254,255,255,255,255,157,88,156,30,15,15,15,15,30,15,30,156,156,15,15,30,15,15,15,15,7,157,137,156,255,255,254,255,156,159,255,255,91,91,15,15,15,15,15,30,156,156,156,156,156,156,30,15,15,15,15,15,91,66,155,255,255,254,156,255,15,15,91,91,91,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,91,65,255,255,255,254,157,91,15,15,91,91,91,15,29,25,7,15,15,15,15,15,15,15,15,15,15,7,26,30,15,91,137,255,255,255,254,255,135,255,91,7,88,91,157,26,90,89,133,30,15,15,15,15,15,15,30,134,89,90,161,158,91,134,255,255,255,254,255,255,255,255,255,156,65,158,90,28,158,89,156,15,15,15,15,15,15,156,90,158,90,161,159,137,255,255,255,255,254,255,255,255,255,255,255,26,26,26,158,157,28,28,90,90,90,90,90,90,7,26,133,158,133,133,156,255,255,255,255,254
 rabbitsize: dw 570
+
 sound_index: dw 0
 filename: db 'perry.wav',0
 sound_size:dw 11000
