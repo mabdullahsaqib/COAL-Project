@@ -342,6 +342,24 @@ printbottom:
 			pop ax
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+carrotposx:dw 150
+carrotposy:dw 100
+printcarrot:
+			push word[carrotsize]
+			push word[carrotposy]
+			push word[carrotposx]
+			push carrot
+			call print
+			ret
+printscorecarrot:
+			push word[carrotsize]
+			push word 135
+			push word 290
+			push carrot
+			call print
+			ret
+			
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 rabbitposx: dw 150
 rabbitposy: dw 180
 rabbitjumpheight: dw 153
@@ -427,7 +445,7 @@ brick1col:db 0x0E
 brick2col:db 0x4F
 brick3col:db 0x5A
 brick4col:db 0x0E
-basemove:db 0; used to check if first base has moved
+
 ;bp+4 has location, bp+6 has color
 brickprintloop:
 				push bp
@@ -540,6 +558,76 @@ checkrabbitcollision:
 					pop ax
 					ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+;if carrot is collected we move it back up and increment score
+checkcarrotcollision:
+					push ax
+					push bx
+					push cx
+					push dx
+					mov ax,[rabbitposy]
+					mov bx,[carrotposy]
+					sub ax,bx
+					jns checkcarrotskip
+					neg ax
+					checkcarrotskip:
+					cmp ax,5
+					jg carrotcollisionend
+					mov ax,[rabbitposx]
+					mov bx,[carrotposx]
+					mov cx,bx
+					add bx,11
+					sub cx,20
+					cmp ax,cx
+					jbe carrotcollisionend
+					cmp ax,bx
+					jae carrotcollisionend
+					
+					add word[score],1
+					mov ax,[carrotoriginalpos]
+					mov word[carrotposy],ax
+					mov byte[carrotlevel],0
+					carrotcollisionend:
+					pop dx
+					pop cx
+					pop bx
+					pop ax
+					ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+;bp+4 contains amount to move by, if the move would exceed screen bounds then we move carrot back to original position
+carrotoriginalpos:dw 0
+carrotlevel:db 0
+movecarrot:
+			push bp
+			mov bp,sp
+			push ax
+			mov ax,[bp+4]
+			add word[carrotposy],ax
+			cmp word[carrotposy],200
+			jl movecarrotskip
+			mov ax,[carrotoriginalpos]
+			mov word[carrotposy],ax
+			mov byte[carrotlevel],0
+			movecarrotskip:
+			pop ax
+			pop bp
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+setcarrot:
+			push ax
+			push dx
+			push cx
+			xor ax,ax
+			mov al, byte[carrotlevel]
+			xor dx,dx
+			mov cx,27
+			mul cx
+			add ax,[carrotoriginalpos]
+			mov [carrotposy],ax
+			pop cx
+			pop dx
+			pop ax
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 movebricks:
 			push ax
 			push bx
@@ -612,6 +700,44 @@ printbackground:
 			pop bp
 			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+converttostring:
+				pusha
+				mov si,digits
+				add si,1
+				mov cx,2
+				mov ax,[score]
+				convertloop:
+							xor dx,dx
+							mov bx,10
+							div bx
+							add dl,'0'
+							mov [si],dl
+							dec si
+							loop convertloop
+				popa
+				ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+scoreposx:db 38
+scoreposy:db 17
+score:dw 0
+digits:db '00'
+printscore: 
+			pusha
+			call converttostring
+			mov ax,cs
+			mov es,ax			
+			mov ah,13h;service to print string in graphic mode
+			mov al,0;sub-service 0 all the characters will be in the same color(bl) and cursor position is not updated after the string is written
+			mov bh,0;page number=always zero
+			mov bl,00001111b;color of the text (white foreground and black background)
+			mov cx,2;length of string
+			mov dh,[scoreposy];y coordinate
+			mov dl,[scoreposx];x coordinate
+			mov bp,digits;mov bp the offset of the string
+			int 10h
+			popa
+		    ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbuffer:
 			cli
 			push es
@@ -661,7 +787,7 @@ nomatch:	mov al, 0x20
 			pop ax
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
- timer:		
+timer:		
 			push si
 			push ax
 			push dx
@@ -686,7 +812,7 @@ nomatch:	mov al, 0x20
 			pop dx
 			pop ax
 			pop si
-			jmp far [cs:timerinterrupt]
+			 jmp far [cs:timerinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
 cli						; disable interrupts
@@ -732,12 +858,15 @@ cli						; disable interrupts
 		out 0x40, al    ; Send the low byte of the divisor
 		mov al, ah      ; Get the high byte of the divisor
 		out 0x40, al    ; Send the high byte of the divisor
+		
 sti						; enable interrupts 
 
 mov bx,[stack_buffer]
 mov ss,bx
 mov ax,13h
 int 0x10
+mov ax,[carrotposy]
+mov word [carrotoriginalpos],ax
 mov ax,60
 mov cx,[horseframerate]; how many cycles until we switch to next horse image
 push ax
@@ -752,10 +881,12 @@ mainloop:
 	call printbottom
 	call printbricks
 	call printrabbit
+	call printcarrot
 	call printfence
 	call printroad
 	call printcar
 	call printhorse
+	call printscorecarrot
 	;set values for next loop
 	add word[roadposx],10
 	add word[fenceposx],10
@@ -784,7 +915,9 @@ mainloop:
 		je skip4
 		cmp byte[rabbitstate],3
 		je dying
+		;rabbit is not dying or dead
 		call movebricks
+		call checkcarrotcollision
 		cmp byte[rabbitstate],0
 		je skip4
 		cmp byte[rabbitstate],1
@@ -799,19 +932,23 @@ mainloop:
 					ja  rabbitjumpskip  ;dont change state unless posy>=jumpheight
 										;if rabbit reached height, check if x pos is within bounds of brick3
 										;if not, set rabbitstate to 3 (dead)
-					mov word[rabbitposy],bx
-					mov byte[rabbitstate],2
-					call checkrabbitcollision
-					rabbitjumpskip:
+						mov word[rabbitposy],bx
+						mov byte[rabbitstate],2
+						call checkrabbitcollision
+						rabbitjumpskip:
 					jmp skip4
 		scrolldown:
 					add word[rabbitposy],5
+					push 5
+					call movecarrot
 					add word[globalbrickpos],5
 					cmp word[rabbitposy],180
 					jl scrolldownskip
-					mov word[rabbitposy],180
-					mov byte[rabbitstate],0
-					call resetbricks
+						mov word[rabbitposy],180
+						mov byte[rabbitstate],0
+						add byte[carrotlevel],1
+						call setcarrot
+						call resetbricks
 					scrolldownskip:
 					jmp skip4
 					
@@ -819,12 +956,15 @@ mainloop:
 					add word[rabbitposy],5
 					cmp word[rabbitposy],180
 					jl dyingskip
-					mov word[rabbitposy],180
-					mov byte[rabbitstate],4
+						mov word[rabbitposy],180
+						mov byte[rabbitstate],4
 					dyingskip:
 	skip4:	
 	;print the buffer
 		call printbuffer
+	;print the score
+		call printscore
+		
 	jmp mainloop
 ;unhook all buffers to return control to system
 ending:
@@ -886,3 +1026,6 @@ sound_index: dw 0
 filename: db 'perry.wav',0
 sound_size:dw 11000
 filehandle: dw 0
+
+carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
+carrotsize:dw 121
