@@ -808,7 +808,7 @@ soundtask:
 				mov al,[es:si]
 				out dx,al
 				add word[sound_index],1
-				  mov cx,0x7FF
+				  mov cx,5500
 				   sounddelay:
 				   loop sounddelay
 				  mov dx,[sound_size]
@@ -938,9 +938,9 @@ mainloop:
     add ax,1
 	push ax         
 	;print everything
-	cli ;disable interrupts when printing rabbit for smooth printing
+	;cli ;disable interrupts when printing rabbit for smooth printing
 	call printbackground
-	sti ;enable interrupts after printing rabbits
+	;sti ;enable interrupts after printing rabbits
 	call printbottom
 	call printbricks
 	call printrabbit

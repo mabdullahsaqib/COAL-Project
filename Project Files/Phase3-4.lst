@@ -808,7 +808,7 @@
    808 000005F6 268A04                  				mov al,[es:si]
    809 000005F9 EE                      				out dx,al
    810 000005FA 8306[8DEF]01            				add word[sound_index],1
-   811 000005FF B9FF07                  				  mov cx,0x7FF
+   811 000005FF B97C15                  				  mov cx,5500
    812                                  				   sounddelay:
    813 00000602 E2FE                    				   loop sounddelay
    814 00000604 8B16[99EF]              				  mov dx,[sound_size]
@@ -938,111 +938,111 @@
    938 0000077B 83C001                      add ax,1
    939 0000077E 50                      	push ax         
    940                                  	;print everything
-   941 0000077F FA                      	cli ;disable interrupts when printing rabbit for smooth printing
-   942 00000780 E8A3FD                  	call printbackground
-   943 00000783 FB                      	sti ;enable interrupts after printing rabbits
-   944 00000784 E8DAFA                  	call printbottom
-   945 00000787 E80FFC                  	call printbricks
-   946 0000078A E82CFB                  	call printrabbit
-   947 0000078D E8FEFA                  	call printcarrot
-   948 00000790 E888F9                  	call printfence
+   941                                  	;cli ;disable interrupts when printing rabbit for smooth printing
+   942 0000077F E8A4FD                  	call printbackground
+   943                                  	;sti ;enable interrupts after printing rabbits
+   944 00000782 E8DCFA                  	call printbottom
+   945 00000785 E811FC                  	call printbricks
+   946 00000788 E82EFB                  	call printrabbit
+   947 0000078B E800FB                  	call printcarrot
+   948 0000078E E88AF9                  	call printfence
    949                                  	
-   950 00000793 E855F9                  	call printroad
-   951 00000796 E8B3FA                  	call printcar
-   952 00000799 E8DEF9                  	call printhorse
-   953 0000079C E802FB                  	call printscorecarrot
+   950 00000791 E857F9                  	call printroad
+   951 00000794 E8B5FA                  	call printcar
+   952 00000797 E8E0F9                  	call printhorse
+   953 0000079A E804FB                  	call printscorecarrot
    954                                  	
    955                                  	;set values for next loop
-   956 0000079F 8306[E700]0A            	add word[roadposx],10
-   957 000007A4 8306[1701]0A            	add word[fenceposx],10
-   958 000007A9 8306[C601]02            	add word[treelineposx],2
-   959 000007AE 83E901                  	sub cx,1 ;cx is used to check horseframes (reset to 0 after 6 cycles)
-   960 000007B1 7516                    	jnz skip0
-   961 000007B3 8B0E[7801]              		mov cx,[horseframerate]
-   962 000007B7 8306[7601]01            		add word[horseframe],1
-   963 000007BC 833E[7601]06            		cmp word[horseframe],6
-   964 000007C1 7506                    		jne skip0
-   965 000007C3 C706[7601]0000          		mov word[horseframe],0
+   956 0000079D 8306[E700]0A            	add word[roadposx],10
+   957 000007A2 8306[1701]0A            	add word[fenceposx],10
+   958 000007A7 8306[C601]02            	add word[treelineposx],2
+   959 000007AC 83E901                  	sub cx,1 ;cx is used to check horseframes (reset to 0 after 6 cycles)
+   960 000007AF 7516                    	jnz skip0
+   961 000007B1 8B0E[7801]              		mov cx,[horseframerate]
+   962 000007B5 8306[7601]01            		add word[horseframe],1
+   963 000007BA 833E[7601]06            		cmp word[horseframe],6
+   964 000007BF 7506                    		jne skip0
+   965 000007C1 C706[7601]0000          		mov word[horseframe],0
    966                                  	skip0:
-   967 000007C9 813E[E700]4001          		cmp word[roadposx],320
-   968 000007CF 7506                    		jne skip
-   969 000007D1 C706[E700]0000          		mov word[roadposx],0
+   967 000007C7 813E[E700]4001          		cmp word[roadposx],320
+   968 000007CD 7506                    		jne skip
+   969 000007CF C706[E700]0000          		mov word[roadposx],0
    970                                  	skip:
-   971 000007D7 813E[1701]4001          		cmp word[fenceposx],320
-   972 000007DD 7506                    		jne skip1
-   973 000007DF C706[1701]0000          		mov word[fenceposx],0
+   971 000007D5 813E[1701]4001          		cmp word[fenceposx],320
+   972 000007DB 7506                    		jne skip1
+   973 000007DD C706[1701]0000          		mov word[fenceposx],0
    974                                  	skip1:
-   975 000007E5 813E[C601]4001          		cmp word[treelineposx],320
-   976 000007EB 7506                    		jne skip2
-   977 000007ED C706[C601]0000          		mov word[treelineposx],0
+   975 000007E3 813E[C601]4001          		cmp word[treelineposx],320
+   976 000007E9 7506                    		jne skip2
+   977 000007EB C706[C601]0000          		mov word[treelineposx],0
    978                                      skip2:
-   979 000007F3 803E[B802]04            		cmp byte[rabbitstate],4
-   980 000007F8 0F848800                		je skip4
-   981 000007FC 803E[B802]03            		cmp byte[rabbitstate],3
-   982 00000801 7469                    		je dying
+   979 000007F1 803E[B802]04            		cmp byte[rabbitstate],4
+   980 000007F6 0F848800                		je skip4
+   981 000007FA 803E[B802]03            		cmp byte[rabbitstate],3
+   982 000007FF 7469                    		je dying
    983                                  		;rabbit is not dying or dead
-   984 00000803 E8AAFC                  		call movebricks
-   985 00000806 E827FC                  		call checkcarrotcollision
-   986 00000809 803E[B802]00            		cmp byte[rabbitstate],0
-   987 0000080E 7474                    		je skip4
-   988 00000810 803E[B802]01            		cmp byte[rabbitstate],1
-   989 00000815 7409                    		je rabbitjump
-   990 00000817 803E[B802]02            		cmp byte[rabbitstate],2
-   991 0000081C 741F                    		je scrolldown
-   992 0000081E EB64                    		jmp skip4
+   984 00000801 E8ACFC                  		call movebricks
+   985 00000804 E829FC                  		call checkcarrotcollision
+   986 00000807 803E[B802]00            		cmp byte[rabbitstate],0
+   987 0000080C 7474                    		je skip4
+   988 0000080E 803E[B802]01            		cmp byte[rabbitstate],1
+   989 00000813 7409                    		je rabbitjump
+   990 00000815 803E[B802]02            		cmp byte[rabbitstate],2
+   991 0000081A 741F                    		je scrolldown
+   992 0000081C EB64                    		jmp skip4
    993                                  		rabbitjump:
-   994 00000820 832E[B402]05            					sub word[rabbitposy],5
-   995 00000825 8B1E[B602]              					mov bx,[rabbitjumpheight]
-   996 00000829 391E[B402]              					cmp word[rabbitposy],bx
-   997 0000082D 770C                    					ja  rabbitjumpskip  ;dont change state unless posy>=jumpheight
+   994 0000081E 832E[B402]05            					sub word[rabbitposy],5
+   995 00000823 8B1E[B602]              					mov bx,[rabbitjumpheight]
+   996 00000827 391E[B402]              					cmp word[rabbitposy],bx
+   997 0000082B 770C                    					ja  rabbitjumpskip  ;dont change state unless posy>=jumpheight
    998                                  										;if rabbit reached height, check if x pos is within bounds of brick3
    999                                  										;if not, set rabbitstate to 3 (dead)
-  1000 0000082F 891E[B402]              						mov word[rabbitposy],bx
-  1001 00000833 C606[B802]02            						mov byte[rabbitstate],2
-  1002 00000838 E8CEFB                  						call checkrabbitcollision
+  1000 0000082D 891E[B402]              						mov word[rabbitposy],bx
+  1001 00000831 C606[B802]02            						mov byte[rabbitstate],2
+  1002 00000836 E8D0FB                  						call checkrabbitcollision
   1003                                  						rabbitjumpskip:
-  1004 0000083B EB47                    					jmp skip4
+  1004 00000839 EB47                    					jmp skip4
   1005                                  		scrolldown:
-  1006 0000083D 8306[B402]05            					add word[rabbitposy],5
-  1007 00000842 6A05                    					push 5
-  1008 00000844 E82EFC                  					call movecarrot
-  1009 00000847 8306[4B03]05            					add word[globalbrickpos],5
-  1010 0000084C 813E[B402]B400          					cmp word[rabbitposy],180
-  1011 00000852 7C16                    					jl scrolldownskip
-  1012 00000854 C706[B402]B400          						mov word[rabbitposy],180
-  1013 0000085A C606[B802]00            						mov byte[rabbitstate],0
-  1014 0000085F 8006[7404]01            						add byte[carrotlevel],1
-  1015 00000864 E82FFC                  						call setcarrot
-  1016 00000867 E86EFA                  						call resetbricks
+  1006 0000083B 8306[B402]05            					add word[rabbitposy],5
+  1007 00000840 6A05                    					push 5
+  1008 00000842 E830FC                  					call movecarrot
+  1009 00000845 8306[4B03]05            					add word[globalbrickpos],5
+  1010 0000084A 813E[B402]B400          					cmp word[rabbitposy],180
+  1011 00000850 7C16                    					jl scrolldownskip
+  1012 00000852 C706[B402]B400          						mov word[rabbitposy],180
+  1013 00000858 C606[B802]00            						mov byte[rabbitstate],0
+  1014 0000085D 8006[7404]01            						add byte[carrotlevel],1
+  1015 00000862 E831FC                  						call setcarrot
+  1016 00000865 E870FA                  						call resetbricks
   1017                                  					scrolldownskip:
-  1018 0000086A EB18                    					jmp skip4
+  1018 00000868 EB18                    					jmp skip4
   1019                                  					
   1020                                  		dying:
-  1021 0000086C 8306[B402]05            					add word[rabbitposy],5
-  1022 00000871 813E[B402]B400          					cmp word[rabbitposy],180
-  1023 00000877 7C0B                    					jl dyingskip
-  1024 00000879 C706[B402]B400          						mov word[rabbitposy],180
-  1025 0000087F C606[B802]04            						mov byte[rabbitstate],4
+  1021 0000086A 8306[B402]05            					add word[rabbitposy],5
+  1022 0000086F 813E[B402]B400          					cmp word[rabbitposy],180
+  1023 00000875 7C0B                    					jl dyingskip
+  1024 00000877 C706[B402]B400          						mov word[rabbitposy],180
+  1025 0000087D C606[B802]04            						mov byte[rabbitstate],4
   1026                                  					dyingskip:
   1027                                  	skip4:	
   1028                                  	;print the buffer
-  1029 00000884 E8FBFC                  		call printbuffer
+  1029 00000882 E8FDFC                  		call printbuffer
   1030                                  	;print the score
-  1031 00000887 E8D6FC                  		call printscore
+  1031 00000885 E8D8FC                  		call printscore
   1032                                  		
-  1033 0000088A E9EEFE                  	jmp mainloop
+  1033 00000888 E9F0FE                  	jmp mainloop
   1034                                  ;unhook all buffers to return control to system
   1035                                  ending:
-  1036 0000088D A1[0804]                mov ax,[keyboardinterrupt]
-  1037 00000890 26A32400                mov word [es:9*4],ax
-  1038 00000894 A1[0A04]                mov ax,[keyboardinterrupt+2]
-  1039 00000897 26A32600                mov word [es:9*4+2],ax
-  1040 0000089B A1[0C04]                mov ax,[timerinterrupt]
-  1041 0000089E 26A37000                mov word [es:1ch*4],ax
-  1042 000008A2 A1[0E04]                mov ax,[timerinterrupt+2]
-  1043 000008A5 26A37200                mov word [es:1ch*4+2],ax
-  1044 000008A9 B8004C                  mov ax,0x4c00
-  1045 000008AC CD21                    int 0x21
+  1036 0000088B A1[0804]                mov ax,[keyboardinterrupt]
+  1037 0000088E 26A32400                mov word [es:9*4],ax
+  1038 00000892 A1[0A04]                mov ax,[keyboardinterrupt+2]
+  1039 00000895 26A32600                mov word [es:9*4+2],ax
+  1040 00000899 A1[0C04]                mov ax,[timerinterrupt]
+  1041 0000089C 26A37000                mov word [es:1ch*4],ax
+  1042 000008A0 A1[0E04]                mov ax,[timerinterrupt+2]
+  1043 000008A3 26A37200                mov word [es:1ch*4+2],ax
+  1044 000008A7 B8004C                  mov ax,0x4c00
+  1045 000008AA CD21                    int 0x21
   1046                                  section .data
   1047                                  ;	  ax,bx,cx,dx,di,si,bp,sp,ss,ds,es,ip,cs,flags
   1048 00000000 0000<rep 200h>          pcb: times 32*16 dw 0
