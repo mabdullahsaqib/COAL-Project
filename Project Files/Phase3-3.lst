@@ -345,17 +345,17 @@
    345 0000028A 9600                    carrotposx:dw 150
    346 0000028C 6400                    carrotposy:dw 100
    347                                  printcarrot:
-   348 0000028E FF36[0EEC]              			push word[carrotsize]
+   348 0000028E FF36[0DEC]              			push word[carrotsize]
    349 00000292 FF36[8C02]              			push word[carrotposy]
    350 00000296 FF36[8A02]              			push word[carrotposx]
-   351 0000029A 68[96EB]                			push carrot
+   351 0000029A 68[95EB]                			push carrot
    352 0000029D E863FD                  			call print
    353 000002A0 C3                      			ret
    354                                  printscorecarrot:
-   355 000002A1 FF36[0EEC]              			push word[carrotsize]
+   355 000002A1 FF36[0DEC]              			push word[carrotsize]
    356 000002A5 688700                  			push word 135
    357 000002A8 682201                  			push word 290
-   358 000002AB 68[96EB]                			push carrot
+   358 000002AB 68[95EB]                			push carrot
    359 000002AE E852FD                  			call print
    360 000002B1 C3                      			ret
    361                                  			
@@ -801,7 +801,7 @@
    801 000005E8 268A04                  			mov al,[es:si]
    802 000005EB EE                      			out dx,al
    803 000005EC 8306[85EB]01            			add word[sound_index],1
-   804 000005F1 8B16[92EB]              			mov dx,[sound_size]
+   804 000005F1 8B16[91EB]              			mov dx,[sound_size]
    805 000005F5 3916[85EB]              			cmp word[sound_index],dx
    806 000005F9 7506                    			jne timerskip
    807 000005FB C706[85EB]0000          			mov word[sound_index],0
@@ -819,11 +819,11 @@
    819 0000060D B000                    		mov al,0
    820 0000060F 8D16[87EB]              		lea dx,filename
    821 00000613 CD21                    		int 21h
-   822 00000615 A3[94EB]                		mov [filehandle],ax
+   822 00000615 A3[93EB]                		mov [filehandle],ax
    823                                  		;read file and write bytes to 
    824 00000618 B43F                    		mov ah,3fh
-   825 0000061A 8B0E[92EB]              		mov cx,[sound_size]
-   826 0000061E 8B1E[94EB]              		mov bx,[filehandle]
+   825 0000061A 8B0E[91EB]              		mov cx,[sound_size]
+   826 0000061E 8B1E[93EB]              		mov bx,[filehandle]
    827 00000622 8B16[0C00]              		mov dx,[sound_buffer]
    828 00000626 8EDA                    		mov ds,dx
    829 00000628 31D2                    		xor dx,dx
@@ -832,7 +832,7 @@
    832 0000062C 8CC8                    		mov ax,cs
    833 0000062E 8ED8                    		mov ds,ax
    834 00000630 B43E                    		mov ah,3eh
-   835 00000632 8B1E[94EB]              		mov bx,[filehandle]
+   835 00000632 8B1E[93EB]              		mov bx,[filehandle]
    836 00000636 CD21                    		int 21h
    837                                  		
    838 00000638 31C0                    		xor ax, ax
@@ -852,7 +852,7 @@
    852                                  
    853 00000670 B036                    		mov al, 0x36    ; Set the command byte for Channel 0, 16-bit binary, square wave
    854 00000672 E643                    		out 0x43, al    ; Send the command byte
-   855 00000674 B82C01                  		mov ax, 300    ; Set the desired frequency
+   855 00000674 B89600                  		mov ax, 150    ; Set the desired frequency
    856 00000677 E640                    		out 0x40, al    ; Send the low byte of the divisor
    857 00000679 88E0                    		mov al, ah      ; Get the high byte of the divisor
    858 0000067B E640                    		out 0x40, al    ; Send the high byte of the divisor
@@ -7711,23 +7711,23 @@
   1021 0000EB83 3A02                    rabbitsize: dw 570
   1022                                  
   1023 0000EB85 0000                    sound_index: dw 0
-  1024 0000EB87 6B696E6773762E7761-     filename: db 'kingsv.wav',0
-  1024 0000EB90 7600               
-  1025 0000EB92 38C7                    sound_size:dw 51000
-  1026 0000EB94 0000                    filehandle: dw 0
+  1024 0000EB87 70657272792E776176-     filename: db 'perry.wav',0
+  1024 0000EB90 00                 
+  1025 0000EB91 F82A                    sound_size:dw 11000
+  1026 0000EB93 0000                    filehandle: dw 0
   1027                                  
-  1028 0000EB96 FFFFFFFFFFFFFFFFFF-     carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
-  1028 0000EB9F E6FFFEFFFFFFFFFFFF-
-  1028 0000EBA8 BE464645FFFEFFFFFF-
-  1028 0000EBB1 FFFF1175464646FFFE-
-  1028 0000EBBA FFFFFF6F062ABA8A8A-
-  1028 0000EBC3 89FFFEFFFF062A2A2A-
-  1028 0000EBCC 42FFFFFFFFFEFF2A2A-
-  1028 0000EBD5 2A2A2AFFFFFFFFFFFE-
-  1028 0000EBDE 2A2A2A2A2A06FFFFFF-
-  1028 0000EBE7 FFFFFE2A2A2A2A06FF-
-  1028 0000EBF0 FFFFFFFFFFFE2A2A06-
-  1028 0000EBF9 06FFFFFFFFFFFFFFFE-
-  1028 0000EC02 0606FFFFFFFFFFFFFF-
-  1028 0000EC0B FFFFFE             
-  1029 0000EC0E 7900                    carrotsize:dw 121
+  1028 0000EB95 FFFFFFFFFFFFFFFFFF-     carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
+  1028 0000EB9E E6FFFEFFFFFFFFFFFF-
+  1028 0000EBA7 BE464645FFFEFFFFFF-
+  1028 0000EBB0 FFFF1175464646FFFE-
+  1028 0000EBB9 FFFFFF6F062ABA8A8A-
+  1028 0000EBC2 89FFFEFFFF062A2A2A-
+  1028 0000EBCB 42FFFFFFFFFEFF2A2A-
+  1028 0000EBD4 2A2A2AFFFFFFFFFFFE-
+  1028 0000EBDD 2A2A2A2A2A06FFFFFF-
+  1028 0000EBE6 FFFFFE2A2A2A2A06FF-
+  1028 0000EBEF FFFFFFFFFFFE2A2A06-
+  1028 0000EBF8 06FFFFFFFFFFFFFFFE-
+  1028 0000EC01 0606FFFFFFFFFFFFFF-
+  1028 0000EC0A FFFFFE             
+  1029 0000EC0D 7900                    carrotsize:dw 121

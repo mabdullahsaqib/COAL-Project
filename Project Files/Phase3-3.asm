@@ -852,7 +852,7 @@ cli						; disable interrupts
 
 		mov al, 0x36    ; Set the command byte for Channel 0, 16-bit binary, square wave
 		out 0x43, al    ; Send the command byte
-		mov ax, 300    ; Set the desired frequency
+		mov ax, 150    ; Set the desired frequency
 		out 0x40, al    ; Send the low byte of the divisor
 		mov al, ah      ; Get the high byte of the divisor
 		out 0x40, al    ; Send the high byte of the divisor
@@ -1021,8 +1021,8 @@ rabbit2: db 255,255,255,255,255,255,161,160,160,25,255,255,255,255,255,255,255,2
 rabbitsize: dw 570
 
 sound_index: dw 0
-filename: db 'kingsv.wav',0
-sound_size:dw 51000
+filename: db 'perry.wav',0
+sound_size:dw 11000
 filehandle: dw 0
 
 carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
