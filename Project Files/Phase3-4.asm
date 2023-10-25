@@ -428,8 +428,8 @@ resetbricks:
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 globalbrickpos:dw 116
-globalleftborder:dw 115
-globalrightborder:dw 155
+globalleftborder:dw 85
+globalrightborder:dw 185
 brick1xpos:dw 85
 brick2xpos:dw 185
 brick3xpos:dw 85
@@ -718,7 +718,7 @@ converttostring:
 				ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 scoreposx:db 38
-scoreposy:db 0
+scoreposy:db 17
 score:dw 0
 digits:db '00'
 printscore: 
@@ -772,6 +772,51 @@ printbuffer:
 			sti
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+soundtask:
+			;read sound data from file and store in sound_buffer segment
+			mov ah,3dh ; open file
+			mov al,0
+			lea dx,filename
+			int 21h
+			mov [filehandle],ax
+			;read file and write bytes to 
+			mov ah,3fh
+			mov cx,[sound_size]
+			mov bx,[filehandle]
+			mov dx,[sound_buffer]
+			mov ds,dx
+			xor dx,dx
+			int 21h
+			;close file
+			mov ax,cs
+			mov ds,ax
+			mov ah,3eh
+			mov bx,[filehandle]
+			int 21h
+			soundloop:
+			;loop to play audio at specific intervals
+			mov dx,[sound_buffer]
+			mov es,dx
+			;send DSP command 10h
+			mov dx, 22ch
+			mov al,10h
+			out dx,al
+			;send byte audio sample
+			mov si, [sound_index]
+			mov al,[es:si]
+			out dx,al
+			add word[sound_index],1
+			mov cx,0xFFFF
+			sounddelay:
+			loop sounddelay
+			mov dx,[sound_size]
+			cmp word[sound_index],dx
+			jne timerskip
+			mov word[sound_index],0
+			timerskip:
+			jmp soundloop
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
 			in al, 0x60						; read a char from keyboard port, scancode
 			cmp al, 0x48					; is the key up
@@ -785,56 +830,98 @@ nomatch:	mov al, 0x20
 			pop ax
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-timer:		
-			push si
-			push ax
-			push dx
-			push es
-			mov dx,[sound_buffer]
-			mov es,dx
-			;send DSP command 10h
-			mov dx, 22ch
-			mov al,10h
-			out dx,al
-			;send byte audio sample
-			mov si, [sound_index]
-			mov al,[es:si]
-			out dx,al
-			add word[sound_index],1
-			mov dx,[sound_size]
-			cmp word[sound_index],dx
-			jne timerskip
-			mov word[sound_index],0
-			timerskip:
-			pop es
-			pop dx
-			pop ax
-			pop si
-			 jmp far [cs:timerinterrupt]
+timer:		;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
+			; push es
+			; push ds
+			; push ss
+			; push sp
+			; push bp
+			; push si
+			; push di
+			; push dx
+			; push cx
+			; push bx
+			; push ax
+			
+			; mov bx,[cs:currenttask]
+			; mov ax,13
+			; mul bx
+			; mov bx,ax
+			
+			; pop ax ;read value of ax
+			; mov [cs:PCB+bx],ax
+			; pop ax ;read value of bx
+			; mov [cs:PCB+bx+2],ax
+			; pop ax ;read value of cx
+			; mov [cs:PCB+bx+4],ax
+			; pop ax ;read value of dx
+			; mov [cs:PCB+bx+6],ax
+			; pop ax ;read value of di
+			; mov [cs:PCB+bx+8],ax
+			; pop ax ;read value of si
+			; mov [cs:PCB+bx+10],ax
+			; pop ax ;read value of bp
+			; mov [cs:PCB+bx+12],ax
+			; pop ax ;read value of sp
+			; mov [cs:PCB+bx+14],ax
+			; pop ax ;read value of ss
+			; mov [cs:PCB+bx+16],ax
+			; pop ax ;read value of ds
+			; mov [cs:PCB+bx+18],ax
+			; pop ax ;read value of es
+			; mov [cs:PCB+bx+20],ax
+			; pop ax;read value of ip
+			; mov [cs:PCB+bx+22],ax
+			; pop ax;read value of cs
+			; mov [cs:PCB+bx+24],ax
+			; pop ax;read value of flags
+			; mov [cs:PCB+bx+26],ax
+			
+			; inc word[cs:currenttask]
+			; cmp word[cs:currenttask],2
+			; jne skipreset
+			; mov word[cs:currenttask],0
+; skipreset:
+			; mov bx,[cs:currenttask]
+			; mov ax,13
+			; mul bx
+			; mov bx,ax
+			
+			; ;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
+			
+			; mov cx,[cs:PCB+bx+4]
+			; mov dx,[cs:PCB+bx+6]
+			; mov di,[cs:PCB+bx+8]
+			; mov si,[cs:PCB+bx+10]
+			; mov bp,[cs:PCB+bx+12]
+			; mov sp,[cs:PCB+bx+14]
+			; mov ss,[cs:PCB+bx+16]
+			; mov es,[cs:PCB+bx+20]
+			
+			; push word[cs:PCB+bx+26] ;flags of new task
+			; push word[cs:PCB+bx+24] ;cs of new task
+			; push word[cs:PCB+bx+22] ;ip of new task
+			; push word[cs:PCB+bx+18] ;ds of new task
+			; mov al,0x20
+			; out 0x20,al 
+			; ;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
+			
+			; mov ax,[PCB+bx+0]
+			; mov bx,[PCB+bx+2]
+			; pop ds
+			iret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
 cli						; disable interrupts
-		;read sound data from file and store in sound_buffer segment
-		mov ah,3dh ; open file
-		mov al,0
-		lea dx,filename
-		int 21h
-		mov [filehandle],ax
-		;read file and write bytes to 
-		mov ah,3fh
-		mov cx,[sound_size]
-		mov bx,[filehandle]
-		mov dx,[sound_buffer]
-		mov ds,dx
-		xor dx,dx
-		int 21h
-		;close file
-		mov ax,cs
-		mov ds,ax
-		mov ah,3eh
-		mov bx,[filehandle]
-		int 21h
 		
+		mov word[PCB+13+22], soundtask
+		mov word[PCB+13+24],cs
+		mov word[PCB+13+26],0x0200
+		
+		mov word[PCB+22],main
+		mov word[PCB+24],cs
+		mov word[PCB+26],0x0200
+		mov word[currenttask],1
 		xor ax, ax
 		mov es, ax					; es=0, point es to IVT base
 		mov ax,[es:9*4]
@@ -849,16 +936,8 @@ cli						; disable interrupts
 		mov word [timerinterrupt+2],ax
 		mov word[es:1ch*4],timer
 		mov [es:1ch*4+2],cs
-
-		mov al, 0x36    ; Set the command byte for Channel 0, 16-bit binary, square wave
-		out 0x43, al    ; Send the command byte
-		mov ax, 300    ; Set the desired frequency
-		out 0x40, al    ; Send the low byte of the divisor
-		mov al, ah      ; Get the high byte of the divisor
-		out 0x40, al    ; Send the high byte of the divisor
-		
 sti						; enable interrupts 
-
+main:
 mov bx,[stack_buffer]
 mov ss,bx
 mov ax,13h
@@ -977,6 +1056,9 @@ mov word [es:1ch*4+2],ax
 mov ax,0x4c00
 int 0x21
 section .data
+;	   ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
+PCB:dw 0,0,0,0,0,0,0,0,0,0,0,0,0
+currenttask:dw 0
 keyboardinterrupt:dw 0,0
 timerinterrupt:dw 0,0
 printmasky:dw 0
@@ -1021,8 +1103,8 @@ rabbit2: db 255,255,255,255,255,255,161,160,160,25,255,255,255,255,255,255,255,2
 rabbitsize: dw 570
 
 sound_index: dw 0
-filename: db 'kingsv.wav',0
-sound_size:dw 51000
+filename: db 'perry.wav',0
+sound_size:dw 11000
 filehandle: dw 0
 
 carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
