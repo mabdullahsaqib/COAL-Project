@@ -1,0 +1,30 @@
+     1                                  [org 0x0100]
+     2                                  section .text
+     3                                  
+     4                                  start:
+     5 00000000 B81300                  mov ax,13h
+     6 00000003 CD10                    int 0x10
+     7                                  loop:
+     8                                  	; send DSP command 10h
+     9 00000005 BA2C02                  	mov dx, 22ch
+    10 00000008 B010                    	mov al,10h
+    11 0000000A EE                      	out dx,al
+    12                                  	;send byte audio sample
+    13 0000000B 8B36[0000]              	mov si, [sound_index]
+    14 0000000F 8A84[0200]              	mov al,[sound_data+si]
+    15 00000013 EE                      	out dx,al
+    16 00000014 FF06[0000]              	inc word[sound_index]
+    17 00000018 B9FF2F                  	mov cx,0x2FFF
+    18                                  	delay:
+    19 0000001B E2FE                    		loop delay
+    20 0000001D 813E[0000]49C9          	cmp word[sound_index], 51529
+    21 00000023 72E0                    	jb loop
+    22 00000025 C706[0000]0000          	mov word [sound_index],0
+    23 0000002B EBD3                    	jmp start
+    24 0000002D B8004C                  	mov ax,0x4c00
+    25 00000030 CD21                    	int 0x21
+    26                                  	
+    27                                  section .data
+    28 00000000 0000                    sound_index: dw 0
+    29                                  sound_data: 
+    30 00000002 <bin C949h>             		incbin "kingsv.wav" ;51,529 bytes

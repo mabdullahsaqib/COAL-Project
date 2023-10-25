@@ -774,6 +774,7 @@ printbuffer:
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 soundtask:
 			;read sound data from file and store in sound_buffer segment
+			cli
 			mov ah,3dh ; open file
 			mov al,0
 			lea dx,filename
@@ -793,29 +794,29 @@ soundtask:
 			mov ah,3eh
 			mov bx,[filehandle]
 			int 21h
-			soundloop:
+			sti
 			;loop to play audio at specific intervals
 			mov dx,[sound_buffer]
 			mov es,dx
-			;send DSP command 10h
-			mov dx, 22ch
-			mov al,10h
-			out dx,al
-			;send byte audio sample
-			mov si, [sound_index]
-			mov al,[es:si]
-			out dx,al
-			add word[sound_index],1
-			mov cx,0xFFFF
-			sounddelay:
-			loop sounddelay
-			mov dx,[sound_size]
-			cmp word[sound_index],dx
-			jne timerskip
-			mov word[sound_index],0
-			timerskip:
+			soundloop:	
+				;send DSP command 10h
+				mov dx, 22ch
+				mov al,10h
+				out dx,al
+				;send byte audio sample
+				mov si,[sound_index]
+				mov al,[es:si]
+				out dx,al
+				add word[sound_index],1
+				  mov cx,0x7FF
+				   sounddelay:
+				   loop sounddelay
+				  mov dx,[sound_size]
+				cmp word[sound_index],dx
+				jne soundskip
+				mov word[sound_index],0
+				soundskip:
 			jmp soundloop
-			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
 			in al, 0x60						; read a char from keyboard port, scancode
@@ -830,98 +831,75 @@ nomatch:	mov al, 0x20
 			pop ax
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-timer:		;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
-			; push es
-			; push ds
-			; push ss
-			; push sp
-			; push bp
-			; push si
-			; push di
-			; push dx
-			; push cx
-			; push bx
-			; push ax
-			
-			; mov bx,[cs:currenttask]
-			; mov ax,13
-			; mul bx
-			; mov bx,ax
-			
-			; pop ax ;read value of ax
-			; mov [cs:PCB+bx],ax
-			; pop ax ;read value of bx
-			; mov [cs:PCB+bx+2],ax
-			; pop ax ;read value of cx
-			; mov [cs:PCB+bx+4],ax
-			; pop ax ;read value of dx
-			; mov [cs:PCB+bx+6],ax
-			; pop ax ;read value of di
-			; mov [cs:PCB+bx+8],ax
-			; pop ax ;read value of si
-			; mov [cs:PCB+bx+10],ax
-			; pop ax ;read value of bp
-			; mov [cs:PCB+bx+12],ax
-			; pop ax ;read value of sp
-			; mov [cs:PCB+bx+14],ax
-			; pop ax ;read value of ss
-			; mov [cs:PCB+bx+16],ax
-			; pop ax ;read value of ds
-			; mov [cs:PCB+bx+18],ax
-			; pop ax ;read value of es
-			; mov [cs:PCB+bx+20],ax
-			; pop ax;read value of ip
-			; mov [cs:PCB+bx+22],ax
-			; pop ax;read value of cs
-			; mov [cs:PCB+bx+24],ax
-			; pop ax;read value of flags
-			; mov [cs:PCB+bx+26],ax
-			
-			; inc word[cs:currenttask]
-			; cmp word[cs:currenttask],2
-			; jne skipreset
-			; mov word[cs:currenttask],0
-; skipreset:
-			; mov bx,[cs:currenttask]
-			; mov ax,13
-			; mul bx
-			; mov bx,ax
-			
-			; ;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
-			
-			; mov cx,[cs:PCB+bx+4]
-			; mov dx,[cs:PCB+bx+6]
-			; mov di,[cs:PCB+bx+8]
-			; mov si,[cs:PCB+bx+10]
-			; mov bp,[cs:PCB+bx+12]
-			; mov sp,[cs:PCB+bx+14]
-			; mov ss,[cs:PCB+bx+16]
-			; mov es,[cs:PCB+bx+20]
-			
-			; push word[cs:PCB+bx+26] ;flags of new task
-			; push word[cs:PCB+bx+24] ;cs of new task
-			; push word[cs:PCB+bx+22] ;ip of new task
-			; push word[cs:PCB+bx+18] ;ds of new task
-			; mov al,0x20
-			; out 0x20,al 
-			; ;ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
-			
-			; mov ax,[PCB+bx+0]
-			; mov bx,[PCB+bx+2]
-			; pop ds
-			iret
+timer:		
+			pcbtimeskip:
+			mov word[pcbtime],0
+			push ds
+			push bx
+			push cs
+			pop ds ; initialize ds to data segment
+			mov bx, [currenttask] ; read index of current in bx
+			shl bx,5 ; multiply by 32 for pcb start
+			mov [pcb+bx+0], ax ; save ax in current pcb
+			mov [pcb+bx+4], cx ; save cx in current pcb
+			mov [pcb+bx+6], dx ; save dx in current pcb
+			mov [pcb+bx+8], si ; save si in current pcb
+			mov [pcb+bx+10], di ; save di in current pcb
+			mov [pcb+bx+12], bp ; save bp in current pcb
+			mov [pcb+bx+24], es ; save es in current pcb
+			pop ax ; read original bx from stack
+			mov [pcb+bx+2], ax ; save bx in current pcb
+			pop ax ; read original ds from stack
+			mov [pcb+bx+20], ax ; save ds in current pcb
+			pop ax ; read original ip from stack
+			mov [pcb+bx+16], ax ; save ip in current pcb
+			pop ax ; read original cs from stack
+			mov [pcb+bx+18], ax ; save cs in current pcb
+			pop ax ; read original flags from stack
+			mov [pcb+bx+26], ax ; save cs in current pcb
+			mov [pcb+bx+22], ss ; save ss in current pcb
+			mov [pcb+bx+14], sp ; save sp in current pcb
+			mov bx, [pcb+bx+28] ; read next pcb of this pcb
+			mov [currenttask], bx ; update current to new pcb
+			mov cl, 5
+			shl bx, cl ; multiply by 32 for pcb start
+			mov cx, [pcb+bx+4] ; read cx of new process
+			mov dx, [pcb+bx+6] ; read dx of new process
+			mov si, [pcb+bx+8] ; read si of new process
+			mov di, [pcb+bx+10] ; read diof new process
+			mov bp, [pcb+bx+12] ; read bp of new process
+			mov es, [pcb+bx+24] ; read es of new process
+			mov ss, [pcb+bx+22] ; read ss of new process
+			mov sp, [pcb+bx+14] ; read sp of new process
+			push word [pcb+bx+26] ; push flags of new process
+			push word [pcb+bx+18] ; push cs of new process
+			push word [pcb+bx+16] ; push ip of new process
+			push word [pcb+bx+20] ; push ds of new process
+			mov al, 0x20
+			out 0x20, al ; send EOI to PIC
+			mov ax, [pcb+bx+0] ; read ax of new process
+			mov bx, [pcb+bx+2] ; read bx of new process
+			pop ds ; read ds of new process
+			iret ; return to new process
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
 cli						; disable interrupts
+		mov word[pcb+32+16],soundtask
+		mov word[pcb+32+18],cs
+		mov word[pcb+32+26],0x0200
+		mov word[pcb+32+28],0
 		
-		mov word[PCB+13+22], soundtask
-		mov word[PCB+13+24],cs
-		mov word[PCB+13+26],0x0200
+		mov word[pcb+16],main
+		mov word[pcb+18],cs
+		mov word[pcb+26],0x0200
+		mov word[pcb+28],1
 		
-		mov word[PCB+22],main
-		mov word[PCB+24],cs
-		mov word[PCB+26],0x0200
-		mov word[currenttask],1
+		mov word[pcb+32+12],bp
+		mov word[pcb+32+14],sp
+		mov word[pcb+32+20],ds
+		mov word[pcb+32+22],0x6000
+		mov word[pcb+32+24],es
+		mov word[currenttask],0
 		xor ax, ax
 		mov es, ax					; es=0, point es to IVT base
 		mov ax,[es:9*4]
@@ -936,6 +914,12 @@ cli						; disable interrupts
 		mov word [timerinterrupt+2],ax
 		mov word[es:1ch*4],timer
 		mov [es:1ch*4+2],cs
+		
+		mov ax, 100
+		out 0x40, al
+		mov al, ah
+		out 0x40, al
+		
 sti						; enable interrupts 
 main:
 mov bx,[stack_buffer]
@@ -954,16 +938,20 @@ mainloop:
     add ax,1
 	push ax         
 	;print everything
+	cli ;disable interrupts when printing rabbit for smooth printing
 	call printbackground
+	sti ;enable interrupts after printing rabbits
 	call printbottom
 	call printbricks
 	call printrabbit
 	call printcarrot
 	call printfence
+	
 	call printroad
 	call printcar
 	call printhorse
 	call printscorecarrot
+	
 	;set values for next loop
 	add word[roadposx],10
 	add word[fenceposx],10
@@ -1056,9 +1044,12 @@ mov word [es:1ch*4+2],ax
 mov ax,0x4c00
 int 0x21
 section .data
-;	   ax,bx,cx,dx,di,si,bp,sp,ss,ds,es
-PCB:dw 0,0,0,0,0,0,0,0,0,0,0,0,0
+;	  ax,bx,cx,dx,di,si,bp,sp,ss,ds,es,ip,cs,flags
+pcb: times 32*16 dw 0
+pcbtime:dw 0
 currenttask:dw 0
+nextpcb:dw 1
+currentpcb:dw 0
 keyboardinterrupt:dw 0,0
 timerinterrupt:dw 0,0
 printmasky:dw 0
