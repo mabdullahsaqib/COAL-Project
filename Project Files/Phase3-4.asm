@@ -434,6 +434,12 @@ resetbricks:
 			pop ax
 			shr ax,7
 			mov byte[brick1dir],al
+			cmp byte[carrotenabled],1
+			jge resetbrickskip
+				mov byte[carrotenabled],al
+				call createcarrot
+			resetbrickskip:
+			
 			rdtsc
 			mov byte[brick1col],0x0E
 			mov cx,6
@@ -591,6 +597,8 @@ checkcarrotcollision:
 					push bx
 					push cx
 					push dx
+					cmp byte[carrotenabled],0
+					je carrotcollisionend
 					mov ax,[rabbitposy]
 					mov bx,[carrotposy]
 					sub ax,bx
@@ -608,11 +616,9 @@ checkcarrotcollision:
 					jbe carrotcollisionend
 					cmp ax,bx
 					jae carrotcollisionend
-					
 					add word[score],1
-					mov ax,[carrotoriginalpos]
-					mov word[carrotposy],ax
-					mov byte[carrotlevel],0
+					call createcarrot
+					mov byte[carrotenabled],0
 					carrotcollisionend:
 					pop dx
 					pop cx
@@ -624,6 +630,8 @@ checkcarrotcollision:
 carrotoriginalpos:dw 0
 carrotlevel:db 0
 movecarrot:
+			cmp byte[carrotenabled],0
+			je movecarrotend
 			push bp
 			mov bp,sp
 			push ax
@@ -631,15 +639,27 @@ movecarrot:
 			add word[carrotposy],ax
 			cmp word[carrotposy],200
 			jl movecarrotskip
-			mov ax,[carrotoriginalpos]
-			mov word[carrotposy],ax
-			mov byte[carrotlevel],0
+				mov byte[carrotenabled],0
+				call createcarrot
 			movecarrotskip:
 			pop ax
 			pop bp
+			movecarrotend:
 			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+carrotenabled:db 0
+createcarrot:
+			push ax
+			mov ax,[carrotoriginalpos]
+			mov word[carrotposy],ax
+			mov byte[carrotlevel],0
+			pop ax
+			ret
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 setcarrot:
+			cmp byte[carrotenabled],0
+			je setcarrotend
 			push ax
 			push dx
 			push cx
@@ -653,6 +673,7 @@ setcarrot:
 			pop cx
 			pop dx
 			pop ax
+			setcarrotend:
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 movebricks:
@@ -699,6 +720,7 @@ movebricks:
 			pop bx
 			pop ax
 			ret
+			
 moveleft:
 		sub ax,1
 		cmp word ax,[globalleftborder]
@@ -722,13 +744,16 @@ printElements:
 				push word[treeanimatedoffset]
 				call printbackground
 				call printbottom
-				call printbricks
-				call printrabbit
-				call printcarrot
+				
 				call printfence
 				call printroad
 				call printcar
 				call printhorse
+				
+				call printbricks
+				call printrabbit
+				call printcarrot
+				
 				call printscorecarrot
 				ret
 			
@@ -828,7 +853,6 @@ GameChecks:
 					cmp byte[rabbitstate],2
 					je scrolldown
 					jmp gamecheckend
-					
 					rabbitjump:
 								sub word[rabbitposy],5
 								mov bx,[rabbitjumpheight]
@@ -850,10 +874,13 @@ GameChecks:
 								jl scrolldownskip
 									 mov word[rabbitposy],180
 									 mov byte[rabbitstate],0
-									 add byte[carrotlevel],1
-									 call setcarrot
 									 call resetbricks
-								scrolldownskip: jmp gamecheckend
+									 cmp byte[carrotenabled],0
+									 je scrolldownskip
+									 inc byte[carrotlevel]
+									 call setcarrot
+								scrolldownskip: 
+								jmp gamecheckend
 								
 					dying:
 								add word[rabbitposy],5
