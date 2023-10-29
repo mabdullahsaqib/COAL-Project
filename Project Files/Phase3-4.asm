@@ -387,8 +387,10 @@ printrabbit:
 ;and all the bricks swap places
 ;This is only called once whenever the platforms come down
 resetbricks:
-			push bx
 			push ax
+			push bx
+			push cx
+			push dx
 			mov word [globalbrickpos],116
 			mov ax,[brick3xpos]
 			mov bl,[brick3dir]
@@ -411,20 +413,25 @@ resetbricks:
 			mov [brick2dir],bl
 			mov [brick2col],bh
 			
-			;newbricks are spanwed at 115
+			;newbricks are spawned at random value between globalleft and globalright borders
 			;with alternating colors based on newbrick
-			mov ax,[globalleftborder]
-			mov word[brick1xpos],ax
+			rdtsc ;gives a random number in ax register
+			push ax
+			mov cx,[globalrightborder]
+			xor dx,dx
+			sub cx,[globalleftborder]
+			inc cx
+			div cx
+			add dx,[globalleftborder] ;
+			mov word[brick1xpos],dx
 			mov byte[brick1dir],1
-			mov byte[brick1col],0x5A
-			cmp byte[newbrick],0
-			mov byte[newbrick],0
-			jne resetbrickend
-			mov byte[brick1col],0x0E
-			mov byte[newbrick],1
-			resetbrickend:
 			pop ax
+			mov byte[brick1col],ah
+			resetbrickend:
+			pop dx
+			pop cx
 			pop bx
+			pop ax
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 globalbrickpos:dw 116
@@ -832,8 +839,6 @@ nomatch:	mov al, 0x20
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 timer:		
-			pcbtimeskip:
-			mov word[pcbtime],0
 			push ds
 			push bx
 			push cs
@@ -938,15 +943,12 @@ mainloop:
     add ax,1
 	push ax         
 	;print everything
-	;cli ;disable interrupts when printing rabbit for smooth printing
 	call printbackground
-	;sti ;enable interrupts after printing rabbits
 	call printbottom
 	call printbricks
 	call printrabbit
 	call printcarrot
 	call printfence
-	
 	call printroad
 	call printcar
 	call printhorse
@@ -1046,7 +1048,6 @@ int 0x21
 section .data
 ;	  ax,bx,cx,dx,di,si,bp,sp,ss,ds,es,ip,cs,flags
 pcb: times 32*16 dw 0
-pcbtime:dw 0
 currenttask:dw 0
 nextpcb:dw 1
 currentpcb:dw 0
