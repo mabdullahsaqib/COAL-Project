@@ -205,6 +205,7 @@ printmountain:
 horseposx:dw 255
 horseposy:dw 70
 horseframe:dw 0
+horseinterval:dw 2
 horseframerate:dw 2
 printhorse:
 			push word [horsesize]
@@ -398,7 +399,12 @@ resetbricks:
 			mov [brick4xpos],ax
 			mov [brick4dir],bl
 			mov [brick4col],bh
-			
+			mov byte[iscurrbrickblue],0
+			cmp bh,0x37
+			jne rbbcs
+			mov byte[iscurrbrickblue],1
+			mov word[bluebricktimer],0
+			rbbcs:
 			mov ax,[brick2xpos]
 			mov bl,[brick2dir]
 			mov bh,[brick2col]
@@ -414,7 +420,8 @@ resetbricks:
 			mov [brick2col],bh
 			
 			;newbricks are spawned at random value between globalleft and globalright borders
-			;with alternating colors based on newbrick
+			;rdstc is also used to check if brick should be blue,
+			;if random value is multiple of 5 then brick is blue else not
 			rdtsc ;gives a random number in ax register
 			push ax
 			mov cx,[globalrightborder]
@@ -422,11 +429,19 @@ resetbricks:
 			sub cx,[globalleftborder]
 			inc cx
 			div cx
-			add dx,[globalleftborder] ;
+			add dx,[globalleftborder]
 			mov word[brick1xpos],dx
-			mov byte[brick1dir],1
 			pop ax
-			mov byte[brick1col],ah
+			shr ax,7
+			mov byte[brick1dir],al
+			rdtsc
+			mov byte[brick1col],0x0E
+			mov cx,6
+			xor dx,dx
+			div cx
+			cmp dx,5
+			jne resetbrickend
+			mov byte[brick1col],0x37
 			resetbrickend:
 			pop dx
 			pop cx
@@ -442,7 +457,7 @@ brick2xpos:dw 185
 brick3xpos:dw 85
 brick4xpos:dw 135
 
-newbrick:db 0
+
 brick1dir:db 1 ;0 means left,1 means right
 brick2dir:db 0 
 brick3dir:db 1 
@@ -453,6 +468,11 @@ brick2col:db 0x4F
 brick3col:db 0x5A
 brick4col:db 0x0E
 
+iscurrbrickblue:db 0
+bluebricktimer:dw 0
+bluebricktimer2:dw 0
+bluebricktimer3:dw 0
+bluebricktimer4:dw 0
 ;bp+4 has location, bp+6 has color
 brickprintloop:
 				push bp
@@ -583,7 +603,7 @@ checkcarrotcollision:
 					mov bx,[carrotposx]
 					mov cx,bx
 					add bx,11
-					sub cx,20
+					sub cx,25
 					cmp ax,cx
 					jbe carrotcollisionend
 					cmp ax,bx
@@ -617,7 +637,7 @@ movecarrot:
 			movecarrotskip:
 			pop ax
 			pop bp
-			ret
+			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 setcarrot:
 			push ax
@@ -696,6 +716,23 @@ moveright:
 		moverightskip:
 		ret 
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+treeanimatedoffset:dw 0
+printElements:
+			    add word[treeanimatedoffset],1
+				push word[treeanimatedoffset]
+				call printbackground
+				call printbottom
+				call printbricks
+				call printrabbit
+				call printcarrot
+				call printfence
+				call printroad
+				call printcar
+				call printhorse
+				call printscorecarrot
+				ret
+			
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbackground:
 			push bp
 			mov bp,sp
@@ -745,6 +782,103 @@ printscore:
 			popa
 		    ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+animatebackground:
+				push cx
+				;set values for next loop
+				add word[roadposx],10
+				add word[fenceposx],10
+				add word[treelineposx],2
+				sub word[horseinterval],1 
+				jnz backgroundskip0
+				mov cx,[horseframerate]
+				mov word[horseinterval],cx
+				add word[horseframe],1
+				cmp word[horseframe],6
+				jne backgroundskip0
+				mov word[horseframe],0
+				backgroundskip0:
+					cmp word[roadposx],320
+					jne backgroundskip
+					mov word[roadposx],0
+				backgroundskip:
+					cmp word[fenceposx],320
+					jne backgroundskip1
+					mov word[fenceposx],0
+				backgroundskip1:
+					cmp word[treelineposx],320
+					jne backgroundskip2
+					mov word[treelineposx],0
+				 backgroundskip2:
+				 pop cx
+				 ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+GameChecks:
+					pusha
+					cmp byte[rabbitstate],4
+					je gamecheckend
+					cmp byte[rabbitstate],3
+					je dying
+					;rabbit is not dying or dead
+					call movebricks
+					call checkcarrotcollision
+					cmp byte[rabbitstate],0
+					je bluebrickcheck
+					cmp byte[rabbitstate],1
+					je rabbitjump
+					cmp byte[rabbitstate],2
+					je scrolldown
+					jmp gamecheckend
+					
+					rabbitjump:
+								sub word[rabbitposy],5
+								mov bx,[rabbitjumpheight]
+								cmp word[rabbitposy],bx
+								ja  rabbitjumpskip  ;dont change state unless posy>=jumpheight
+													;if rabbit reached height, check if x pos is within bounds of brick3
+													;if not, set rabbitstate to 3 (dead)
+									mov word[rabbitposy],bx
+									mov byte[rabbitstate],2
+									call checkrabbitcollision
+									rabbitjumpskip:
+								jmp gamecheckend
+					scrolldown:
+								add word[rabbitposy],5
+								push 5
+								call movecarrot
+								add word[globalbrickpos],5
+								cmp word[rabbitposy],180
+								jl scrolldownskip
+									 mov word[rabbitposy],180
+									 mov byte[rabbitstate],0
+									 add byte[carrotlevel],1
+									 call setcarrot
+									 call resetbricks
+								scrolldownskip: jmp gamecheckend
+								
+					dying:
+								add word[rabbitposy],5
+								cmp word[rabbitposy],180
+								jl dyingskip
+									mov word[rabbitposy],180
+									mov byte[rabbitstate],4
+								dyingskip:
+								jmp gamecheckend
+					bluebrickcheck:
+								cmp byte[iscurrbrickblue],1
+								jne bluebrickcheckskip
+								cmp word[bluebricktimer],0xFFFF
+								jc bluebrickcheckskip
+									mov byte[iscurrbrickblue],0
+									mov byte[brick4col],0x0B
+									mov word[bluebricktimer],0
+									mov byte[rabbitstate],4
+									mov word[rabbitposy],184
+								bluebrickcheckskip:
+					gamecheckend:
+					popa
+					ret
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbuffer:
 			cli
 			push es
@@ -754,6 +888,7 @@ printbuffer:
 			push cx
 			push ax
 			push dx
+			
 			mov ax,[printmasky]
 			mov cx,320
 			xor dx,dx
@@ -769,6 +904,7 @@ printbuffer:
 			sub cx,ax
 			shr cx,1
 			rep movsw
+			
 			pop dx
 			pop ax
 			pop cx
@@ -839,6 +975,17 @@ nomatch:	mov al, 0x20
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 timer:		
+			;check if current brick is blue and if it is then increment both timers
+			cmp byte[iscurrbrickblue],1
+			jne timerskip
+			cmp word[bluebricktimer],0xFFFF
+			je timerskip
+			inc word[bluebricktimer]
+			cmp word[bluebricktimer],0xDFFF
+			jc timerskip
+			mov byte[brick4col],0x28
+			jne timerskip
+			timerskip:			
 			push ds
 			push bx
 			push cs
@@ -902,7 +1049,9 @@ cli						; disable interrupts
 		mov word[pcb+32+12],bp
 		mov word[pcb+32+14],sp
 		mov word[pcb+32+20],ds
-		mov word[pcb+32+22],0x6000
+		mov word[pcb+32+22],0x6700 ;stack segment for 2nd task, 0x7000 is original stack
+									;meaning it starts from 7000:FFFF
+									;second stack then starts from 6700:FFFF and goes backwards
 		mov word[pcb+32+24],es
 		mov word[currenttask],0
 		xor ax, ax
@@ -913,6 +1062,7 @@ cli						; disable interrupts
 		mov word[keyboardinterrupt+2],ax
 		mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
 		mov [es:9*4+2], cs			; store segment at n*4+2
+		
 		mov ax,[es:1ch*4]
 		mov word [timerinterrupt],ax
 		mov ax,[es:1ch*4+2]
@@ -925,6 +1075,9 @@ cli						; disable interrupts
 		mov al, ah
 		out 0x40, al
 		
+		
+		
+		
 sti						; enable interrupts 
 main:
 mov bx,[stack_buffer]
@@ -935,105 +1088,21 @@ mov ax,[carrotposy]
 mov word [carrotoriginalpos],ax
 mov ax,60
 mov cx,[horseframerate]; how many cycles until we switch to next horse image
+mov [horseinterval],cx
 push ax
 call printbackground
 call printbuffer
 mov word [printmasky],47
+
 mainloop:
-    add ax,1
-	push ax         
-	;print everything
-	call printbackground
-	call printbottom
-	call printbricks
-	call printrabbit
-	call printcarrot
-	call printfence
-	call printroad
-	call printcar
-	call printhorse
-	call printscorecarrot
-	
-	;set values for next loop
-	add word[roadposx],10
-	add word[fenceposx],10
-	add word[treelineposx],2
-	sub cx,1 ;cx is used to check horseframes (reset to 0 after 6 cycles)
-	jnz skip0
-		mov cx,[horseframerate]
-		add word[horseframe],1
-		cmp word[horseframe],6
-		jne skip0
-		mov word[horseframe],0
-	skip0:
-		cmp word[roadposx],320
-		jne skip
-		mov word[roadposx],0
-	skip:
-		cmp word[fenceposx],320
-		jne skip1
-		mov word[fenceposx],0
-	skip1:
-		cmp word[treelineposx],320
-		jne skip2
-		mov word[treelineposx],0
-    skip2:
-		cmp byte[rabbitstate],4
-		je skip4
-		cmp byte[rabbitstate],3
-		je dying
-		;rabbit is not dying or dead
-		call movebricks
-		call checkcarrotcollision
-		cmp byte[rabbitstate],0
-		je skip4
-		cmp byte[rabbitstate],1
-		je rabbitjump
-		cmp byte[rabbitstate],2
-		je scrolldown
-		jmp skip4
-		rabbitjump:
-					sub word[rabbitposy],5
-					mov bx,[rabbitjumpheight]
-					cmp word[rabbitposy],bx
-					ja  rabbitjumpskip  ;dont change state unless posy>=jumpheight
-										;if rabbit reached height, check if x pos is within bounds of brick3
-										;if not, set rabbitstate to 3 (dead)
-						mov word[rabbitposy],bx
-						mov byte[rabbitstate],2
-						call checkrabbitcollision
-						rabbitjumpskip:
-					jmp skip4
-		scrolldown:
-					add word[rabbitposy],5
-					push 5
-					call movecarrot
-					add word[globalbrickpos],5
-					cmp word[rabbitposy],180
-					jl scrolldownskip
-						mov word[rabbitposy],180
-						mov byte[rabbitstate],0
-						add byte[carrotlevel],1
-						call setcarrot
-						call resetbricks
-					scrolldownskip:
-					jmp skip4
-					
-		dying:
-					add word[rabbitposy],5
-					cmp word[rabbitposy],180
-					jl dyingskip
-						mov word[rabbitposy],180
-						mov byte[rabbitstate],4
-					dyingskip:
-	skip4:	
-	;print the buffer
-		call printbuffer
-	;print the score
-		call printscore
-		
-	jmp mainloop
+	call printElements
+	call animatebackground
+	call GameChecks
+	call printbuffer
+	call printscore
+jmp mainloop
 ;unhook all buffers to return control to system
+
 ending:
 mov ax,[keyboardinterrupt]
 mov word [es:9*4],ax
