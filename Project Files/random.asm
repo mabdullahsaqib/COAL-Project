@@ -1,5 +1,5 @@
 [org 0x0100]
-mov dh,0xFF
-shr dh,7
+mov dx,0xFFFF
+shr dx,15
 mov ax,0x4c00
 int 0x21

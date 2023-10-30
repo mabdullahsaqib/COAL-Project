@@ -346,11 +346,14 @@ printbottom:
 carrotposx:dw 150
 carrotposy:dw 100
 printcarrot:
+			cmp byte[carrotenabled],0
+			je printcarrotskip
 			push word[carrotsize]
 			push word[carrotposy]
 			push word[carrotposx]
 			push carrot
 			call print
+			printcarrotskip:
 			ret
 printscorecarrot:
 			push word[carrotsize]
@@ -432,14 +435,13 @@ resetbricks:
 			add dx,[globalleftborder]
 			mov word[brick1xpos],dx
 			pop ax
-			shr ax,7
+			shr ax,15
 			mov byte[brick1dir],al
 			cmp byte[carrotenabled],1
-			jge resetbrickskip
+			je rbcskip
 				mov byte[carrotenabled],al
-				call createcarrot
-			resetbrickskip:
-			
+				call resetcarrot
+			rbcskip:
 			rdtsc
 			mov byte[brick1col],0x0E
 			mov cx,6
@@ -456,8 +458,8 @@ resetbricks:
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 globalbrickpos:dw 116
-globalleftborder:dw 85
-globalrightborder:dw 185
+globalleftborder:dw 115
+globalrightborder:dw 155
 brick1xpos:dw 85
 brick2xpos:dw 185
 brick3xpos:dw 85
@@ -476,9 +478,8 @@ brick4col:db 0x0E
 
 iscurrbrickblue:db 0
 bluebricktimer:dw 0
-bluebricktimer2:dw 0
-bluebricktimer3:dw 0
-bluebricktimer4:dw 0
+bluebricktime:dw 0x8FFF
+redwarningtimer:dw 0x6FFF
 ;bp+4 has location, bp+6 has color
 brickprintloop:
 				push bp
@@ -617,7 +618,7 @@ checkcarrotcollision:
 					cmp ax,bx
 					jae carrotcollisionend
 					add word[score],1
-					call createcarrot
+					call resetcarrot
 					mov byte[carrotenabled],0
 					carrotcollisionend:
 					pop dx
@@ -630,36 +631,33 @@ checkcarrotcollision:
 carrotoriginalpos:dw 0
 carrotlevel:db 0
 movecarrot:
-			cmp byte[carrotenabled],0
-			je movecarrotend
 			push bp
 			mov bp,sp
 			push ax
+			cmp byte[carrotenabled],0
+			je movecarrotskip
+			
 			mov ax,[bp+4]
 			add word[carrotposy],ax
 			cmp word[carrotposy],200
 			jl movecarrotskip
-				mov byte[carrotenabled],0
-				call createcarrot
+			call resetcarrot
+			mov byte[carrotenabled],0
 			movecarrotskip:
 			pop ax
 			pop bp
-			movecarrotend:
 			ret 2
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 carrotenabled:db 0
-createcarrot:
+resetcarrot:
 			push ax
 			mov ax,[carrotoriginalpos]
 			mov word[carrotposy],ax
 			mov byte[carrotlevel],0
 			pop ax
 			ret
-
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 setcarrot:
-			cmp byte[carrotenabled],0
-			je setcarrotend
 			push ax
 			push dx
 			push cx
@@ -673,7 +671,6 @@ setcarrot:
 			pop cx
 			pop dx
 			pop ax
-			setcarrotend:
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 movebricks:
@@ -720,7 +717,6 @@ movebricks:
 			pop bx
 			pop ax
 			ret
-			
 moveleft:
 		sub ax,1
 		cmp word ax,[globalleftborder]
@@ -743,16 +739,16 @@ printElements:
 			    add word[treeanimatedoffset],1
 				push word[treeanimatedoffset]
 				call printbackground
+				
 				call printbottom
+				call printbricks
+				call printrabbit
+				call printcarrot
 				
 				call printfence
 				call printroad
 				call printcar
 				call printhorse
-				
-				call printbricks
-				call printrabbit
-				call printcarrot
 				
 				call printscorecarrot
 				ret
@@ -853,6 +849,7 @@ GameChecks:
 					cmp byte[rabbitstate],2
 					je scrolldown
 					jmp gamecheckend
+					
 					rabbitjump:
 								sub word[rabbitposy],5
 								mov bx,[rabbitjumpheight]
@@ -867,20 +864,23 @@ GameChecks:
 								jmp gamecheckend
 					scrolldown:
 								add word[rabbitposy],5
+								add word[globalbrickpos],5
+								cmp byte[carrotenabled],0
+								je scrollskip
 								push 5
 								call movecarrot
-								add word[globalbrickpos],5
+								scrollskip:
 								cmp word[rabbitposy],180
 								jl scrolldownskip
+									 cmp byte[carrotenabled],0
+									 je scrollskip2
+										add byte[carrotlevel],1									 
+										call setcarrot
+									 scrollskip2:
 									 mov word[rabbitposy],180
 									 mov byte[rabbitstate],0
 									 call resetbricks
-									 cmp byte[carrotenabled],0
-									 je scrolldownskip
-									 inc byte[carrotlevel]
-									 call setcarrot
-								scrolldownskip: 
-								jmp gamecheckend
+								scrolldownskip: jmp gamecheckend
 								
 					dying:
 								add word[rabbitposy],5
@@ -893,7 +893,8 @@ GameChecks:
 					bluebrickcheck:
 								cmp byte[iscurrbrickblue],1
 								jne bluebrickcheckskip
-								cmp word[bluebricktimer],0xFFFF
+								mov ax,[bluebricktime]
+								cmp word[bluebricktimer],ax
 								jc bluebrickcheckskip
 									mov byte[iscurrbrickblue],0
 									mov byte[brick4col],0x0B
@@ -1002,17 +1003,21 @@ nomatch:	mov al, 0x20
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 timer:		
+			push ax
 			;check if current brick is blue and if it is then increment both timers
 			cmp byte[iscurrbrickblue],1
 			jne timerskip
-			cmp word[bluebricktimer],0xFFFF
+			mov ax,[bluebricktime]
+			cmp word[bluebricktimer],ax
 			je timerskip
 			inc word[bluebricktimer]
-			cmp word[bluebricktimer],0xDFFF
+			mov ax,[redwarningtimer]
+			cmp word[bluebricktimer],ax
 			jc timerskip
 			mov byte[brick4col],0x28
 			jne timerskip
 			timerskip:			
+			pop ax
 			push ds
 			push bx
 			push cs
@@ -1117,7 +1122,7 @@ mov ax,60
 mov cx,[horseframerate]; how many cycles until we switch to next horse image
 mov [horseinterval],cx
 push ax
-call printbackground
+call printbackground;print initial background that wont get written to again
 call printbuffer
 mov word [printmasky],47
 
