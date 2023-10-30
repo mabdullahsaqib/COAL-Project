@@ -343,7 +343,7 @@ printbottom:
 			pop ax
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-carrotposx:dw 150
+carrotposx:dw 160
 carrotposy:dw 100
 printcarrot:
 			cmp byte[carrotenabled],0
@@ -425,7 +425,8 @@ resetbricks:
 			;newbricks are spawned at random value between globalleft and globalright borders
 			;rdstc is also used to check if brick should be blue,
 			;if random value is multiple of 5 then brick is blue else not
-			rdtsc ;gives a random number in ax register
+			;only yellow bricks are spawned at random location, else it is at 135
+			rdtsc 
 			push ax
 			mov cx,[globalrightborder]
 			xor dx,dx
@@ -448,8 +449,14 @@ resetbricks:
 			xor dx,dx
 			div cx
 			cmp dx,5
-			jne resetbrickend
+			jne resetbrickskip
 			mov byte[brick1col],0x37
+			mov word[brick1xpos],135
+			resetbrickskip:
+			cmp dx,4
+			jne resetbrickend
+			mov byte[brick1col],0x5C
+			mov word[brick1xpos],135
 			resetbrickend:
 			pop dx
 			pop cx
@@ -458,8 +465,8 @@ resetbricks:
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 globalbrickpos:dw 116
-globalleftborder:dw 115
-globalrightborder:dw 155
+globalleftborder:dw 85
+globalrightborder:dw 185
 brick1xpos:dw 85
 brick2xpos:dw 185
 brick3xpos:dw 85
@@ -472,14 +479,14 @@ brick3dir:db 1
 brick4dir:db 0 
 
 brick1col:db 0x0E
-brick2col:db 0x4F
-brick3col:db 0x5A
+brick2col:db 0x0E
+brick3col:db 0x0E
 brick4col:db 0x0E
 
 iscurrbrickblue:db 0
 bluebricktimer:dw 0
-bluebricktime:dw 0x8FFF
-redwarningtimer:dw 0x6FFF
+bluebricktime:dw 0x2FFF
+redwarningtimer:dw 0x1FFF
 ;bp+4 has location, bp+6 has color
 brickprintloop:
 				push bp
@@ -566,7 +573,70 @@ printbricks:
 			pop cx
 			pop bx
 			pop ax
+			ret	
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+movebricks:
+			pusha
+			mov si,brick1xpos
+			mov di,brick1dir
+			mov bx,brick1col
+			mov cx,4
+			movebrickloop:
+				mov ax,[si]
+				mov dl,[di]
+				mov dh,[bx]
+				cmp dh,0x0E
+				jne bsskip
+				cmp dl,0
+				jne bs
+				call moveleft
+				jmp bsskip
+				bs:
+				call moveright
+				bsskip:
+				mov word[si],ax
+				mov byte[di],dl
+				add di,1
+				add bx,1
+				add si,2
+			    loop movebrickloop
+			;add or subtract 1 from rabbit pos based on dir value of brick4/brick3 based on rabbitstate
+			mov dl,[brick4dir]
+			mov dh,[brick4col]
+			cmp byte[rabbitstate],1
+			je bsend
+			cmp byte[rabbitstate],2
+			jne bsskip2
+			mov dl,[brick3dir]
+			mov dh,[brick3col]
+			bsskip2:
+			cmp dh,0x0E
+			jne bsend
+			cmp dl,0
+			je bsskip4	
+				add word[rabbitposx],1
+			jmp bsend
+			bsskip4:
+				sub word[rabbitposx],1
+			bsend:
+			popa
 			ret
+moveleft:
+		sub ax,1
+		cmp word ax,[globalleftborder]
+		jae moveleftskip
+		add ax,2
+		mov dl,1
+		moveleftskip:
+		ret
+moveright:
+		add ax,1
+		cmp word ax,[globalrightborder]
+		jbe moverightskip
+		sub ax,2
+		mov dl,0
+		moverightskip:
+		ret 
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 checkrabbitcollision:
 					push ax
@@ -672,98 +742,8 @@ setcarrot:
 			pop dx
 			pop ax
 			ret
-;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-movebricks:
-			push ax
-			push bx
-			push cx
-			push di
-			push si
-			mov si,brick1xpos
-			mov di,brick1dir
-			mov cx,4
-			movebrickloop:
-				mov ax,[si]
-				mov bl,[di]
-				cmp bl,0
-				jne bs
-				call moveleft
-				jmp bsskip
-				bs:
-				call moveright
-				bsskip:
-				mov word[si],ax
-				mov byte[di],bl
-				add di,1
-				add si,2
-			    loop movebrickloop
-			mov bl,[brick4dir]
-			cmp byte[rabbitstate],1
-			je bsend
-			cmp byte[rabbitstate],2
-			jne bsskip2
-			mov bl,[brick3dir]
-			bsskip2:
-			cmp bl,0
-			je bsskip4	
-			add word[rabbitposx],1
-			jmp bsend
-			bsskip4:
-			sub word[rabbitposx],1
-			bsend:
-			pop si
-			pop di
-			pop cx
-			pop bx
-			pop ax
-			ret
-moveleft:
-		sub ax,1
-		cmp word ax,[globalleftborder]
-		jae moveleftskip
-		add ax,2
-		mov bl,1
-		moveleftskip:
-		ret
-moveright:
-		add ax,1
-		cmp word ax,[globalrightborder]
-		jbe moverightskip
-		sub ax,2
-		mov bl,0
-		moverightskip:
-		ret 
-;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-treeanimatedoffset:dw 0
-printElements:
-			    add word[treeanimatedoffset],1
-				push word[treeanimatedoffset]
-				call printbackground
-				
-				call printbottom
-				call printbricks
-				call printrabbit
-				call printcarrot
-				
-				call printfence
-				call printroad
-				call printcar
-				call printhorse
-				
-				call printscorecarrot
-				ret
-			
-;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-printbackground:
-			push bp
-			mov bp,sp
-			call printsky
-			call printsun
-			call printmountain
-			push word[bp+4]
-		    call printtrees
-			pop bp
-			ret 2
+
+
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 converttostring:
 				pusha
@@ -803,6 +783,37 @@ printscore:
 			popa
 		    ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+printbackground:
+			push bp
+			mov bp,sp
+			call printsky
+			call printsun
+			call printmountain
+			push word[bp+4]
+		    call printtrees
+			pop bp
+			ret 2
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+treeanimatedoffset:dw 0
+printElements:
+			    add word[treeanimatedoffset],1
+				push word[treeanimatedoffset]
+				call printbackground
+				
+				call printbottom
+				call printbricks
+				call printrabbit
+				call printcarrot
+				
+				call printfence
+				call printroad
+				call printcar
+				call printhorse
+				
+				call printscorecarrot
+				ret
+;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 animatebackground:
 				push cx
 				;set values for next loop
@@ -970,23 +981,23 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				;send DSP command 10h
-				mov dx, 22ch
-				mov al,10h
-				out dx,al
-				;send byte audio sample
-				mov si,[sound_index]
-				mov al,[es:si]
-				out dx,al
-				add word[sound_index],1
-				  mov cx,5500
-				   sounddelay:
-				   loop sounddelay
-				  mov dx,[sound_size]
-				cmp word[sound_index],dx
-				jne soundskip
-				mov word[sound_index],0
-				soundskip:
+				; ;send DSP command 10h
+				; mov dx, 22ch
+				; mov al,10h
+				; out dx,al
+				; ;send byte audio sample
+				; mov si,[sound_index]
+				; mov al,[es:si]
+				; out dx,al
+				; add word[sound_index],1
+				  ; mov cx,5500
+				   ; sounddelay:
+				   ; loop sounddelay
+				  ; mov dx,[sound_size]
+				; cmp word[sound_index],dx
+				; jne soundskip
+				; mov word[sound_index],0
+				; soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
