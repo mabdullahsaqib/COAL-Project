@@ -1147,6 +1147,9 @@ jmp mainloop
 ;unhook all buffers to return control to system
 
 ending:
+xor ax,ax
+mov es,ax
+cli
 mov ax,[keyboardinterrupt]
 mov word [es:9*4],ax
 mov ax,[keyboardinterrupt+2]
@@ -1155,6 +1158,7 @@ mov ax,[timerinterrupt]
 mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
 mov word [es:1ch*4+2],ax
+sti
 mov ax,0x4c00
 int 0x21
 section .data
