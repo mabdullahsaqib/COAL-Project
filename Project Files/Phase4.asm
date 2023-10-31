@@ -371,8 +371,9 @@ rabbitjumpheight: dw 153
 rabbitstate: db 0 ;rabbitstate is used to check current state of rabbit
 				 ;0=rabbit can jump (not jumping,falling or scrolling down), this is the only state where interrupt can do anything
 				 ;1=rabbit is jumping
-				 ;2=bottom is scrolling down
+				 ;2=bricks are scrolling down
 				 ;3=rabbit is falling (dying).
+				 ;4=rabbit's tail has ended
 printrabbit:
 			push word[rabbitsize]
 			push word[rabbitposy]
@@ -427,7 +428,7 @@ resetbricks:
 			;rdstc is also used to check if brick should be blue,
 			;if random value is multiple of 5 then brick is blue else not
 			;only yellow bricks are spawned at random location, else it is at 135
-			rdtsc 
+			rdtsc                                                                        
 			push ax
 			mov cx,[globalrightborder]
 			xor dx,dx
@@ -442,21 +443,23 @@ resetbricks:
 			cmp byte[carrotenabled],1
 			je rbcskip
 				mov byte[carrotenabled],al
+				cmp al,0
+				je rbcskip
 				call resetcarrot
 			rbcskip:
 			rdtsc
 			mov cl,[yellowcol]
 			mov byte[brick1col],cl
-			mov cx,6
+			mov cx,4
 			xor dx,dx
 			div cx
-			cmp dx,5
+			cmp dx,0
 			jne resetbrickskip
 			mov cl,byte[bluecol]
 			mov byte[brick1col],cl
 			mov word[brick1xpos],135
 			resetbrickskip:
-			cmp dx,4
+			cmp dx,1
 			jne resetbrickend
 			mov cl,byte[skincol]
 			mov byte[brick1col],cl
@@ -491,6 +494,7 @@ yellowcol:db 0x0E
 bluecol:db 0x37   
 skincol:db 0x5C
 bottomcol:db 0x0B 
+
 iscurrbrickblue:db 0
 bluebricktimer:dw 0
 bluebricktime:dw 0x2FFF
@@ -813,13 +817,13 @@ printElements:
 				call printbricks
 				call printrabbit
 				call printcarrot
+				call printscorecarrot
 				
 				call printfence
 				call printroad
 				call printcar
 				call printhorse
 				
-				call printscorecarrot
 				ret
 ;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 animatebackground:
@@ -869,6 +873,19 @@ GameChecks:
 					je scrolldown
 					jmp gamecheckend
 					
+					bluebrickcheck:
+								cmp byte[iscurrbrickblue],1
+								jne bluebrickcheckskip
+								mov ax,[bluebricktime]
+								cmp word[bluebricktimer],ax
+								jc bluebrickcheckskip
+									mov byte[iscurrbrickblue],0
+									mov byte[brick4col],0x0B
+									mov word[bluebricktimer],0
+									mov byte[rabbitstate],4
+									mov word[rabbitposy],184
+								bluebrickcheckskip:
+								jmp gamecheckend
 					rabbitjump:
 								sub word[rabbitposy],5
 								mov bx,[rabbitjumpheight]
@@ -899,7 +916,8 @@ GameChecks:
 									 mov word[rabbitposy],180
 									 mov byte[rabbitstate],0
 									 call resetbricks
-								scrolldownskip: jmp gamecheckend
+								scrolldownskip: 
+								jmp gamecheckend
 								
 					dying:
 								add word[rabbitposy],5
@@ -909,18 +927,7 @@ GameChecks:
 									mov byte[rabbitstate],4
 								dyingskip:
 								jmp gamecheckend
-					bluebrickcheck:
-								cmp byte[iscurrbrickblue],1
-								jne bluebrickcheckskip
-								mov ax,[bluebricktime]
-								cmp word[bluebricktimer],ax
-								jc bluebrickcheckskip
-									mov byte[iscurrbrickblue],0
-									mov byte[brick4col],0x0B
-									mov word[bluebricktimer],0
-									mov byte[rabbitstate],4
-									mov word[rabbitposy],184
-								bluebrickcheckskip:
+					
 					gamecheckend:
 					popa
 					ret
@@ -989,23 +996,23 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				; ;send DSP command 10h
-				; mov dx, 22ch
-				; mov al,10h
-				; out dx,al
-				; ;send byte audio sample
-				; mov si,[sound_index]
-				; mov al,[es:si]
-				; out dx,al
-				; add word[sound_index],1
-				  ; mov cx,5500
-				   ; sounddelay:
-				   ; loop sounddelay
-				  ; mov dx,[sound_size]
-				; cmp word[sound_index],dx
-				; jne soundskip
-				; mov word[sound_index],0
-				; soundskip:
+				;send DSP command 10h
+				mov dx, 22ch
+				mov al,10h
+				out dx,al
+				;send byte audio sample
+				mov si,[sound_index]
+				mov al,[es:si]
+				out dx,al
+				add word[sound_index],1
+				  mov cx,5500
+				   sounddelay:
+				   loop sounddelay
+				  mov dx,[sound_size]
+				cmp word[sound_index],dx
+				jne soundskip
+				mov word[sound_index],0
+				soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
@@ -1037,6 +1044,7 @@ timer:
 			jne timerskip
 			timerskip:			
 			pop ax
+			;multitasking code
 			push ds
 			push bx
 			push cs
@@ -1059,7 +1067,7 @@ timer:
 			pop ax ; read original cs from stack
 			mov [pcb+bx+18], ax ; save cs in current pcb
 			pop ax ; read original flags from stack
-			mov [pcb+bx+26], ax ; save cs in current pcb
+			mov [pcb+bx+26], ax ; save flags in current pcb
 			mov [pcb+bx+22], ss ; save ss in current pcb
 			mov [pcb+bx+14], sp ; save sp in current pcb
 			mov bx, [pcb+bx+28] ; read next pcb of this pcb
@@ -1069,7 +1077,7 @@ timer:
 			mov cx, [pcb+bx+4] ; read cx of new process
 			mov dx, [pcb+bx+6] ; read dx of new process
 			mov si, [pcb+bx+8] ; read si of new process
-			mov di, [pcb+bx+10] ; read diof new process
+			mov di, [pcb+bx+10] ; read di of new process
 			mov bp, [pcb+bx+12] ; read bp of new process
 			mov es, [pcb+bx+24] ; read es of new process
 			mov ss, [pcb+bx+22] ; read ss of new process
@@ -1100,9 +1108,9 @@ cli						; disable interrupts
 		mov word[pcb+32+12],bp
 		mov word[pcb+32+14],sp
 		mov word[pcb+32+20],ds
-		mov word[pcb+32+22],0x6700 ;stack segment for 2nd task, 0x7000 is original stack
+		mov word[pcb+32+22],0x6800 ;stack segment for 2nd task, 0x7000 is original stack
 									;meaning it starts from 7000:FFFF
-									;second stack then starts from 6700:FFFF and goes backwards
+									;second stack then starts from 6800:FFFF and goes backwards
 		mov word[pcb+32+24],es
 		mov word[currenttask],0
 		xor ax, ax
@@ -1125,10 +1133,6 @@ cli						; disable interrupts
 		out 0x40, al
 		mov al, ah
 		out 0x40, al
-		
-		
-		
-		
 sti						; enable interrupts 
 main:
 mov bx,[stack_buffer]
@@ -1137,14 +1141,12 @@ mov ax,13h
 int 0x10
 mov ax,[carrotposy]
 mov word [carrotoriginalpos],ax
-mov ax,60
 mov cx,[horseframerate]; how many cycles until we switch to next horse image
 mov [horseinterval],cx
-push ax
+push 60
 call printbackground;print initial background that wont get written to again
 call printbuffer
 mov word [printmasky],47
-
 mainloop:
 	call printElements
 	call animatebackground
