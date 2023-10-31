@@ -330,8 +330,9 @@ printbottom:
 			mov cx,320
 			mul cx
 			mov di,ax
+			mov al,[bottomcol]
 			bottomloop:
-					  mov byte[es:di],0x0B
+					  mov byte[es:di],al
 					  inc di
 					  cmp di,64000
 					  jne bottomloop
@@ -403,7 +404,7 @@ resetbricks:
 			mov [brick4dir],bl
 			mov [brick4col],bh
 			mov byte[iscurrbrickblue],0
-			cmp bh,0x37
+			cmp bh,byte[bluecol]
 			jne rbbcs
 			mov byte[iscurrbrickblue],1
 			mov word[bluebricktimer],0
@@ -444,18 +445,21 @@ resetbricks:
 				call resetcarrot
 			rbcskip:
 			rdtsc
-			mov byte[brick1col],0x0E
+			mov cl,[yellowcol]
+			mov byte[brick1col],cl
 			mov cx,6
 			xor dx,dx
 			div cx
 			cmp dx,5
 			jne resetbrickskip
-			mov byte[brick1col],0x37
+			mov cl,byte[bluecol]
+			mov byte[brick1col],cl
 			mov word[brick1xpos],135
 			resetbrickskip:
 			cmp dx,4
 			jne resetbrickend
-			mov byte[brick1col],0x5C
+			mov cl,byte[skincol]
+			mov byte[brick1col],cl
 			mov word[brick1xpos],135
 			resetbrickend:
 			pop dx
@@ -483,6 +487,10 @@ brick2col:db 0x0E
 brick3col:db 0x0E
 brick4col:db 0x0E
 
+yellowcol:db 0x0E 
+bluecol:db 0x37   
+skincol:db 0x5C
+bottomcol:db 0x0B 
 iscurrbrickblue:db 0
 bluebricktimer:dw 0
 bluebricktime:dw 0x2FFF
@@ -585,7 +593,7 @@ movebricks:
 				mov ax,[si]
 				mov dl,[di]
 				mov dh,[bx]
-				cmp dh,0x0E
+				cmp dh,byte[yellowcol]
 				jne bsskip
 				cmp dl,0
 				jne bs
@@ -610,7 +618,7 @@ movebricks:
 			mov dl,[brick3dir]
 			mov dh,[brick3col]
 			bsskip2:
-			cmp dh,0x0E
+			cmp dh,byte[yellowcol]
 			jne bsend
 			cmp dl,0
 			je bsskip4	
