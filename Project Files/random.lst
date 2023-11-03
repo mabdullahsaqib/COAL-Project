@@ -1,5 +1,0 @@
-     1                                  [org 0x0100]
-     2 00000000 BAFFFF                  mov dx,0xFFFF
-     3 00000003 C1EA0F                  shr dx,15
-     4 00000006 B8004C                  mov ax,0x4c00
-     5 00000009 CD21                    int 0x21
