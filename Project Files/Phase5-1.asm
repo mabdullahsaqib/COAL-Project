@@ -971,6 +971,32 @@ printbuffer:
 			sti
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+readstartimage:
+			pushad
+			cli
+			mov ah,3dh ; open file
+			mov al,0
+			lea dx,startfilename
+			int 21h
+			mov [startfilehandle],ax
+			;read file and write bytes to 
+			 mov ah,3fh
+			 mov cx,64000
+			 mov bx,[startfilehandle]
+			 mov dx,[startScreen_buffer]
+			 mov ds,dx
+			 xor dx,dx
+			 int 21h
+			 ;close file
+			mov ax,cs
+			mov ds,ax
+			mov ah,3eh
+			mov bx,[startfilehandle]
+			int 21h
+			sti
+			popad
+			ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 soundtask:
 			;read sound data from file and store in sound_buffer segment
 			cli
@@ -998,23 +1024,23 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				;send DSP command 10h
-				mov dx, 22ch
-				mov al,10h
-				out dx,al
-				;send byte audio sample
-				mov si,[sound_index]
-				mov al,[es:si]
-				out dx,al
-				add word[sound_index],1
-				  mov cx,5500
-				   sounddelay:
-				   loop sounddelay
-				  mov dx,[sound_size]
-				cmp word[sound_index],dx
-				jne soundskip
-				mov word[sound_index],0
-				soundskip:
+				; ;send DSP command 10h
+				; mov dx, 22ch
+				; mov al,10h
+				; out dx,al
+				; ;send byte audio sample
+				; mov si,[sound_index]
+				; mov al,[es:si]
+				; out dx,al
+				; add word[sound_index],1
+				  ; mov cx,5500
+				   ; sounddelay:
+				   ; loop sounddelay
+				  ; mov dx,[sound_size]
+				; cmp word[sound_index],dx
+				; jne soundskip
+				; mov word[sound_index],0
+				; soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
@@ -1098,77 +1124,43 @@ timer:
 startscreen:     
             push es
             push ax
+			push cx
 			push dx
             push di
 			push si
+			push ds
+			
 
             mov ax, 0xA000
             mov es, ax                  ; point es to video base
-            mov di, 0                   ; point di to top left column
+            xor di,di
+			xor si,si
+			
+			mov ax,[startScreen_buffer]
+			mov ds,ax
+			
+			mov cx,32000
+			rep movsw
+			
 
-            mov si, startScreen_buffer
-
-            mov dl, 0x07
-
-intloc:  
-            mov dh, [si]
-            mov word [es:di], dx        ; display next char on screen
-            add di, 2                   ; move to next screen location
-            add si, 2                   ; move to next buffer location
-            cmp di, 64000               ; has the whole screen cleared
-            jne intloc                 ; if no clear next position
-
-
+			pop ds
             pop si
             pop di
             pop dx
+			pop cx
             pop ax
             pop es
             ret
-;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
-endscreen:     
-            push es
-            push ax
-			push dx
-            push di
-			push si
 
-            mov ax, 0xA000
-            mov es, ax                  ; point es to video base
-            mov di, 0                   ; point di to top left column
-
-            mov si, startScreen_buffer
-
-            mov dl, 0x07
-
-nextloc:  
-            mov dh, [si]
-            mov word [es:di], dx        ; display next char on screen
-            add di, 2                   ; move to next screen location
-            add si, 2                   ; move to next buffer location
-            cmp di, 64000               ; has the whole screen cleared
-            jne nextloc                 ; if no clear next position
-
-
-            pop si
-            pop di
-            pop dx
-            pop ax
-            pop es
-            ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
-
+		call readstartimage    
         mov ax,13h
         int 0x10
-
         call startscreen   ; display startscreen  
-
         mov ah, 0		; wait for user input to start the game
         int 0x16
-		
 		mov byte[gamestate], 1
-      
         cli						; disable interrupts
 
 		mov word[pcb+32+16],soundtask
@@ -1211,13 +1203,9 @@ start:
 		out 0x40, al
 		
         sti						; enable interrupts	 
-		
 main:
-
         mov bx,[stack_buffer]
         mov ss,bx
-            
-
         mov ax,[carrotposy]
         mov word [carrotoriginalpos],ax
         mov cx,[horseframerate]; how many cycles until we switch to next horse image
@@ -1236,7 +1224,6 @@ main:
         	call printscore
         jmp mainloop
 ;unhook all buffers to return control to system
-
 ending:
 xor ax,ax
 mov es,ax
@@ -1252,7 +1239,7 @@ mov word [es:1ch*4+2],ax
 sti
 
 
-call endscreen
+call startscreen
 
 mov ax,0x4c00
 int 0x21
@@ -1311,6 +1298,9 @@ sound_index: dw 0
 filename: db 'perry.wav',0
 sound_size:dw 11000
 filehandle: dw 0
+
+startfilename:db 'A.txt',0
+startfilehandle:dw 0
 
 carrot: db 255,255,255,255,255,255,255,255,255,230,255,254,255,255,255,255,255,255,190,70,70,69,255,254,255,255,255,255,255,17,117,70,70,70,255,254,255,255,255,111,6,42,186,138,138,137,255,254,255,255,6,42,42,42,66,255,255,255,255,254,255,42,42,42,42,42,255,255,255,255,255,254,42,42,42,42,42,6,255,255,255,255,255,254,42,42,42,42,6,255,255,255,255,255,255,254,42,42,6,6,255,255,255,255,255,255,255,254,6,6,255,255,255,255,255,255,255,255,255,254
 carrotsize:dw 121
