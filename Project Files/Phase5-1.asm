@@ -118,7 +118,7 @@ ret 8
 delay:
 	push cx
 	push bx
-	mov bx,0x000F
+	mov bx,0x0FFF
 	delayloop:
 	mov cx,0xFFFF
 	delayloop1:
@@ -823,7 +823,6 @@ printElements:
 				call printroad
 				call printcar
 				call printhorse
-				
 				ret
 ;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 animatebackground:
@@ -937,13 +936,9 @@ GameChecks:
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 printbuffer:
 			cli
+			pusha
 			push es
-			push di
 			push ds
-			push si
-			push cx
-			push ax
-			push dx
 			
 			mov ax,[printmasky]
 			mov cx,320
@@ -961,13 +956,9 @@ printbuffer:
 			shr cx,1
 			rep movsw
 			
-			pop dx
-			pop ax
-			pop cx
-			pop si
 			pop ds
-			pop di
 			pop es
+			popa 
 			sti
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
@@ -997,6 +988,23 @@ readstartimage:
 			popad
 			ret
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
+startText:db 'Press E to Continue'
+startTextPrint:
+			pusha
+			mov ax,cs
+			mov es,ax			
+			mov ah,13h;service to print string in graphic mode
+			mov al,0;sub-service 0 all the characters will be in the same color(bl) and cursor position is not updated after the string is written
+			mov bh,0;page number=always zero
+			mov bl,00001111b;color of the text (white foreground and black background)
+			mov cx,19;length of string
+			mov dh,4;y coordinate
+			mov dl,9;x coordinate
+			mov bp,startText;mov bp the offset of the string
+			int 10h
+			popa
+		    ret
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 soundtask:
 			;read sound data from file and store in sound_buffer segment
 			cli
@@ -1024,26 +1032,28 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				; ;send DSP command 10h
-				; mov dx, 22ch
-				; mov al,10h
-				; out dx,al
-				; ;send byte audio sample
-				; mov si,[sound_index]
-				; mov al,[es:si]
-				; out dx,al
-				; add word[sound_index],1
-				  ; mov cx,5500
-				   ; sounddelay:
-				   ; loop sounddelay
-				  ; mov dx,[sound_size]
-				; cmp word[sound_index],dx
-				; jne soundskip
-				; mov word[sound_index],0
-				; soundskip:
+				;send DSP command 10h
+				mov dx, 22ch
+				mov al,10h
+				out dx,al
+				;send byte audio sample
+				mov si,[sound_index]
+				mov al,[es:si]
+				out dx,al
+				add word[sound_index],1
+				  mov cx,5500
+				   sounddelay:
+				   loop sounddelay
+				  mov dx,[sound_size]
+				cmp word[sound_index],dx
+				jne soundskip
+				mov word[sound_index],0
+				soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
+			cmp byte[gamestate],1           ;only do keyboard interrupt override when gamestate is 1
+			jne nomatch
 			in al, 0x60						; read a char from keyboard port, scancode
 			cmp al, 0x48					; is the key up
 			jne nomatch						; leave interrupt routine 
@@ -1057,6 +1067,30 @@ nomatch:	mov al, 0x20
 			jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 timer:		
+			cmp byte[gamestate],0
+			je StartTimer
+			cmp byte[gamestate],3
+			je EndTimer
+			jmp GameTimer
+			
+StartTimer:			
+			push ax
+			inc word[startScreenTick]
+			mov ax,[startScreenBlinkInterval]
+			cmp word[startScreenTick],ax
+			jc starttimerskip
+				mov word[startScreenTick],0
+				call startscreen
+				jmp starttimerend
+			starttimerskip:
+				shr ax,1
+				cmp word[startScreenTick],ax
+				jc starttimerend
+				call startTextPrint
+			starttimerend:
+			pop ax
+			iret 
+GameTimer:
 			push ax
 			;check if current brick is blue and if it is then increment both timers
 			cmp byte[iscurrbrickblue],1
@@ -1120,6 +1154,11 @@ timer:
 			mov bx, [pcb+bx+2] ; read bx of new process
 			pop ds ; read ds of new process
 			iret ; return to new process
+
+EndTimer:
+			cmp word[currenttask],1
+			je GameTimer
+			iret 
 ;--------------------------------------------------------------------
 startscreen:     
             push es
@@ -1154,13 +1193,9 @@ startscreen:
 
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 start:
-		call readstartimage    
         mov ax,13h
         int 0x10
-        call startscreen   ; display startscreen  
-        mov ah, 0		; wait for user input to start the game
-        int 0x16
-		mov byte[gamestate], 1
+		call readstartimage    
         cli						; disable interrupts
 
 		mov word[pcb+32+16],soundtask
@@ -1206,6 +1241,15 @@ start:
 main:
         mov bx,[stack_buffer]
         mov ss,bx
+		
+		call startscreen   ; display startscreen  
+waitforstart:
+        mov ah, 0		; wait for user input to start the game
+        int 0x16
+		cmp ah,0x12
+		jne waitforstart
+		mov byte[gamestate], 1
+		
         mov ax,[carrotposy]
         mov word [carrotoriginalpos],ax
         mov cx,[horseframerate]; how many cycles until we switch to next horse image
@@ -1214,17 +1258,23 @@ main:
         call printbackground;print initial background that wont get written to again
         call printbuffer
         mov word [printmasky],47
+		mov ax,0
         mainloop:
         	call printElements
         	call animatebackground
-			cmp byte[gamestate], 2
-			je ending
         	call GameChecks
         	call printbuffer
         	call printscore
+			cmp byte[gamestate],2
+			jne mainloop
+			inc ax
+			cmp ax,0x003F
+			je ending
         jmp mainloop
 ;unhook all buffers to return control to system
 ending:
+mov byte[gamestate],3
+call startscreen
 xor ax,ax
 mov es,ax
 cli
@@ -1237,10 +1287,6 @@ mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
 mov word [es:1ch*4+2],ax
 sti
-
-
-call startscreen
-
 mov ax,0x4c00
 int 0x21
 section .data
@@ -1254,6 +1300,8 @@ timerinterrupt:dw 0,0
 printmasky:dw 0
 gamestate: db 0
 startScreen_buffer: dw 0x5000
+startScreenBlinkInterval:dw 0x2FFF
+startScreenTick:dw 0
 stack_buffer: dw 0x7000
 sound_buffer: dw 0x8000
 buffer: dw 0x9000  ; buffer is stored near end of memory at 9000. 
