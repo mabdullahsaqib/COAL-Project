@@ -1075,6 +1075,9 @@ timer:
 			
 StartTimer:			
 			push ax
+			push ds
+			push cs
+			pop ds
 			inc word[startScreenTick]
 			mov ax,[startScreenBlinkInterval]
 			cmp word[startScreenTick],ax
@@ -1088,6 +1091,7 @@ StartTimer:
 				jc starttimerend
 				call startTextPrint
 			starttimerend:
+			pop ds
 			pop ax
 			iret 
 GameTimer:
