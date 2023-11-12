@@ -1,0 +1,107 @@
+     1                                  [org 0x0100]
+     2 00000000 E9A500                  jmp start
+     3                                  
+     4                                  ;bp+6 x
+     5                                  ;bp+4 y
+     6                                  DrawPoint:
+     7 00000003 55                      		push bp
+     8 00000004 89E5                    		mov bp,sp
+     9 00000006 60                      		pusha
+    10 00000007 06                      		push es
+    11 00000008 31D2                    		xor dx,dx
+    12 0000000A 8B4604                  		mov ax,[bp+4]
+    13 0000000D B95000                  		mov cx,80
+    14 00000010 F7E1                    		mul cx
+    15 00000012 034606                  		add ax,[bp+6]
+    16 00000015 D1E0                    		shl ax,1
+    17 00000017 89C7                    		mov di,ax
+    18 00000019 B800B8                  		mov ax,0xb800
+    19 0000001C 8EC0                    		mov es,ax
+    20 0000001E B82007                  		mov ax,0x0720
+    21 00000021 B02A                    		mov al,'*'
+    22 00000023 268905                  		mov [es:di],ax
+    23 00000026 07                      		pop es
+    24 00000027 61                      		popa
+    25 00000028 5D                      		pop bp
+    26 00000029 C20400                  		ret 4
+    27                                  LineDraw:
+    28 0000002C 55                      		push bp
+    29 0000002D 89E5                    		mov bp,sp
+    30 0000002F 83EC04                  		sub sp,4
+    31 00000032 60                      		pusha
+    32 00000033 A1[B700]                		mov ax,[x2]
+    33 00000036 2B06[B300]              		sub ax,[x1]
+    34 0000003A 8B1E[B900]              		mov bx,[y2]
+    35 0000003E 2B1E[B500]              		sub bx,[y1]
+    36 00000042 80FFFF                  		cmp bh,0xFF
+    37 00000045 7502                    		jne skipneg
+    38 00000047 F7DB                    		neg bx
+    39                                  		skipneg:
+    40 00000049 39D8                    		cmp ax,bx
+    41 0000004B 7302                    		jnc LineX
+    42                                  LineY:
+    43                                  		
+    44 0000004D EB36                    		jmp LineDrawEnd
+    45                                  LineX:
+    46 0000004F 50                      		push ax
+    47 00000050 31D2                    		xor dx,dx
+    48 00000052 F7F3                    		div bx
+    49 00000054 89C1                    		mov cx,ax
+    50 00000056 58                      		pop ax
+    51 00000057 8B16[B300]              		mov dx,[x1]
+    52 0000005B 8956FE                  		mov [bp-2],dx
+    53 0000005E 8B16[B500]              		mov dx,[y1]
+    54 00000062 8956FC                  		mov [bp-4],dx
+    55 00000065 51                      		push cx
+    56                                  		linedrawloopx:
+    57 00000066 FF76FE                  					push word[bp-2]
+    58 00000069 FF76FC                  					push word[bp-4]
+    59 0000006C E894FF                  					call DrawPoint
+    60 0000006F FF46FE                  					inc word[bp-2]
+    61 00000072 83E901                  					sub cx,1
+    62 00000075 7505                    					jnz linedrawincskip
+    63 00000077 FF46FC                  					inc word[bp-4]
+    64 0000007A 59                      					pop cx
+    65 0000007B 51                      					push cx
+    66                                  					linedrawincskip:
+    67 0000007C 8B16[B700]              					mov dx,[x2]
+    68 00000080 3B56FE                  					cmp dx,[bp-2]
+    69 00000083 73E1                    					jnc linedrawloopx
+    70                                  		LineDrawEnd:
+    71 00000085 59                      		pop cx
+    72 00000086 61                      		popa
+    73 00000087 83C404                  		add sp,4
+    74 0000008A 5D                      		pop bp
+    75 0000008B C3                      		ret
+    76                                  
+    77                                  
+    78                                  clrscr:
+    79 0000008C 51                      		push cx
+    80 0000008D 57                      		push di
+    81 0000008E 06                      		push es
+    82 0000008F 31FF                    		xor di,di
+    83 00000091 B800B8                  		mov ax,0xb800
+    84 00000094 8EC0                    		mov es,ax
+    85                                  		clrscrloop:
+    86 00000096 26C7052000              				  mov word[es:di],0x0020
+    87 0000009B 83C702                  				  add di,2
+    88 0000009E 81FFA00F                				  cmp di,4000
+    89 000000A2 72F2                    				  jc clrscrloop
+    90 000000A4 07                      		pop es
+    91 000000A5 5F                      		pop di
+    92 000000A6 59                      		pop cx
+    93 000000A7 C3                      		ret
+    94                                  start:
+    95 000000A8 E8E1FF                  call clrscr
+    96 000000AB E87EFF                  call LineDraw
+    97                                  
+    98                                  
+    99                                  
+   100 000000AE B8004C                  mov ax,0x4c00
+   101 000000B1 CD21                    int 0x21
+   102                                  
+   103 000000B3 0500                    x1:dw 5
+   104 000000B5 0500                    y1:dw 5
+   105                                  
+   106 000000B7 2300                    x2:dw 35
+   107 000000B9 0A00                    y2:dw 10

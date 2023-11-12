@@ -1160,6 +1160,23 @@ EndTimer:
 			je GameTimer
 			iret 
 ;--------------------------------------------------------------------
+printendmsg:
+			call converttostring
+			pusha
+			mov ax,cs
+			mov es,ax			
+			mov ah,13h;service to print string in graphic mode
+			mov al,0;sub-service 0 all the characters will be in the same color(bl) and cursor position is not updated after the string is written
+			mov bh,0;page number=always zero
+			mov bl,00001111b;color of the text (white foreground and black background)
+			mov cx,2;length of string
+			mov dh,4;y coordinate
+			mov dl,15;x coordinate
+			mov bp,digits;mov bp the offset of the string
+			int 10h
+			popa
+		    ret
+;--------------------------------------------------------------------
 startscreen:     
             push es
             push ax
@@ -1275,6 +1292,7 @@ waitforstart:
 ending:
 mov byte[gamestate],3
 call startscreen
+call printendmsg
 xor ax,ax
 mov es,ax
 cli
