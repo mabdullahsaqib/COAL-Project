@@ -1226,7 +1226,7 @@
   1224 000009E6 C706[3A00]0002          		mov word[pcb+32+26],0x0200
   1225 000009EC C706[3C00]0000          		mov word[pcb+32+28],0
   1226                                  		
-  1227 000009F2 C706[1000][660A]        		mov word[pcb+16],main
+  1227 000009F2 C706[1000][5A0A]        		mov word[pcb+16],main
   1228 000009F8 8C0E[1200]              		mov word[pcb+18],cs
   1229 000009FC C706[1A00]0002          		mov word[pcb+26],0x0200
   1230 00000A02 C706[1C00]0100          		mov word[pcb+28],1
@@ -1245,74 +1245,74 @@
   1243 00000A2C A3[0604]                		mov word[keyboardinterrupt],ax
   1244 00000A2F 26A12600                		mov ax,[es:9*4+2]
   1245 00000A33 A3[0804]                		mov word[keyboardinterrupt+2],ax
-  1246 00000A36 26C7062400[7108]        		mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
-  1247 00000A3D 268C0E2600              		mov [es:9*4+2], cs			; store segment at n*4+2
+  1246                                  ;		mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
+  1247                                  ;		mov [es:9*4+2], cs			; store segment at n*4+2
   1248                                  		
-  1249 00000A42 26A17000                		mov ax,[es:1ch*4]
-  1250 00000A46 A3[0A04]                		mov word [timerinterrupt],ax
-  1251 00000A49 26A17200                		mov ax,[es:1ch*4+2]
-  1252 00000A4D A3[0C04]                		mov word [timerinterrupt+2],ax
-  1253 00000A50 26C7067000[9508]        		mov word[es:1ch*4],timer
-  1254 00000A57 268C0E7200              		mov [es:1ch*4+2],cs
+  1249 00000A36 26A17000                		mov ax,[es:1ch*4]
+  1250 00000A3A A3[0A04]                		mov word [timerinterrupt],ax
+  1251 00000A3D 26A17200                		mov ax,[es:1ch*4+2]
+  1252 00000A41 A3[0C04]                		mov word [timerinterrupt+2],ax
+  1253 00000A44 26C7067000[9508]        		mov word[es:1ch*4],timer
+  1254 00000A4B 268C0E7200              		mov [es:1ch*4+2],cs
   1255                                  		
-  1256 00000A5C B86400                  		mov ax, 100
-  1257 00000A5F E640                    		out 0x40, al
-  1258 00000A61 88E0                    		mov al, ah
-  1259 00000A63 E640                    		out 0x40, al
+  1256 00000A50 B86400                  		mov ax, 100
+  1257 00000A53 E640                    		out 0x40, al
+  1258 00000A55 88E0                    		mov al, ah
+  1259 00000A57 E640                    		out 0x40, al
   1260                                  		
-  1261 00000A65 FB                              sti						; enable interrupts	 
+  1261 00000A59 FB                              sti						; enable interrupts	 
   1262                                  main:
-  1263 00000A66 8B1E[1704]                      mov bx,[stack_buffer]
-  1264 00000A6A 8ED3                            mov ss,bx
+  1263 00000A5A 8B1E[1704]                      mov bx,[stack_buffer]
+  1264 00000A5E 8ED3                            mov ss,bx
   1265                                  		
-  1266 00000A6C E842FF                  		call startscreen   ; display startscreen  
+  1266 00000A60 E84EFF                  		call startscreen   ; display startscreen  
   1267                                  waitforstart:
-  1268 00000A6F B400                            mov ah, 0		; wait for user input to start the game
-  1269 00000A71 CD16                            int 0x16
-  1270 00000A73 80FC12                  		cmp ah,0x12
-  1271 00000A76 75F7                    		jne waitforstart
-  1272 00000A78 C606[1004]01            		mov byte[gamestate], 1
+  1268 00000A63 B400                            mov ah, 0		; wait for user input to start the game
+  1269 00000A65 CD16                            int 0x16
+  1270 00000A67 80FC12                  		cmp ah,0x12
+  1271 00000A6A 75F7                    		jne waitforstart
+  1272 00000A6C C606[1004]01            		mov byte[gamestate], 1
   1273                                  		
-  1274 00000A7D A1[9002]                        mov ax,[carrotposy]
-  1275 00000A80 A3[7005]                        mov word [carrotoriginalpos],ax
-  1276 00000A83 8B0E[7A01]                      mov cx,[horseframerate]; how many cycles until we switch to next horse image
-  1277 00000A87 890E[7801]                      mov [horseinterval],cx
-  1278 00000A8B 6A3C                            push 60
-  1279 00000A8D E879FB                          call printbackground;print initial background that wont get written to again
-  1280 00000A90 E8F1FC                          call printbuffer
-  1281 00000A93 C706[0E04]2F00                  mov word [printmasky],47
-  1282 00000A99 B80000                  		mov ax,0
+  1274 00000A71 A1[9002]                        mov ax,[carrotposy]
+  1275 00000A74 A3[7005]                        mov word [carrotoriginalpos],ax
+  1276 00000A77 8B0E[7A01]                      mov cx,[horseframerate]; how many cycles until we switch to next horse image
+  1277 00000A7B 890E[7801]                      mov [horseinterval],cx
+  1278 00000A7F 6A3C                            push 60
+  1279 00000A81 E885FB                          call printbackground;print initial background that wont get written to again
+  1280 00000A84 E8FDFC                          call printbuffer
+  1281 00000A87 C706[0E04]2F00                  mov word [printmasky],47
+  1282 00000A8D B80000                  		mov ax,0
   1283                                          mainloop:
-  1284 00000A9C E882FB                          	call printElements
-  1285 00000A9F E8A7FB                          	call animatebackground
-  1286 00000AA2 E801FC                          	call GameChecks
-  1287 00000AA5 E8DCFC                          	call printbuffer
-  1288 00000AA8 E83CFB                          	call printscore
-  1289 00000AAB 803E[1004]02            			cmp byte[gamestate],2
-  1290 00000AB0 75EA                    			jne mainloop
-  1291 00000AB2 40                      			inc ax
-  1292 00000AB3 83F83F                  			cmp ax,0x003F
-  1293 00000AB6 7402                    			je ending
-  1294 00000AB8 EBE2                            jmp mainloop
+  1284 00000A90 E88EFB                          	call printElements
+  1285 00000A93 E8B3FB                          	call animatebackground
+  1286 00000A96 E80DFC                          	call GameChecks
+  1287 00000A99 E8E8FC                          	call printbuffer
+  1288 00000A9C E848FB                          	call printscore
+  1289 00000A9F 803E[1004]02            			cmp byte[gamestate],2
+  1290 00000AA4 75EA                    			jne mainloop
+  1291 00000AA6 40                      			inc ax
+  1292 00000AA7 83F83F                  			cmp ax,0x003F
+  1293 00000AAA 7402                    			je ending
+  1294 00000AAC EBE2                            jmp mainloop
   1295                                  ;unhook all buffers to return control to system
   1296                                  ending:
-  1297 00000ABA C606[1004]03            mov byte[gamestate],3
-  1298 00000ABF E8EFFE                  call startscreen
-  1299 00000AC2 E8CEFE                  call printendmsg
-  1300 00000AC5 31C0                    xor ax,ax
-  1301 00000AC7 8EC0                    mov es,ax
-  1302 00000AC9 FA                      cli
-  1303 00000ACA A1[0604]                mov ax,[keyboardinterrupt]
-  1304 00000ACD 26A32400                mov word [es:9*4],ax
-  1305 00000AD1 A1[0804]                mov ax,[keyboardinterrupt+2]
-  1306 00000AD4 26A32600                mov word [es:9*4+2],ax
-  1307 00000AD8 A1[0A04]                mov ax,[timerinterrupt]
-  1308 00000ADB 26A37000                mov word [es:1ch*4],ax
-  1309 00000ADF A1[0C04]                mov ax,[timerinterrupt+2]
-  1310 00000AE2 26A37200                mov word [es:1ch*4+2],ax
-  1311 00000AE6 FB                      sti
-  1312 00000AE7 B8004C                  mov ax,0x4c00
-  1313 00000AEA CD21                    int 0x21
+  1297 00000AAE C606[1004]03            mov byte[gamestate],3
+  1298 00000AB3 E8FBFE                  call startscreen
+  1299 00000AB6 E8DAFE                  call printendmsg
+  1300 00000AB9 31C0                    xor ax,ax
+  1301 00000ABB 8EC0                    mov es,ax
+  1302 00000ABD FA                      cli
+  1303 00000ABE A1[0604]                mov ax,[keyboardinterrupt]
+  1304 00000AC1 26A32400                mov word [es:9*4],ax
+  1305 00000AC5 A1[0804]                mov ax,[keyboardinterrupt+2]
+  1306 00000AC8 26A32600                mov word [es:9*4+2],ax
+  1307 00000ACC A1[0A04]                mov ax,[timerinterrupt]
+  1308 00000ACF 26A37000                mov word [es:1ch*4],ax
+  1309 00000AD3 A1[0C04]                mov ax,[timerinterrupt+2]
+  1310 00000AD6 26A37200                mov word [es:1ch*4+2],ax
+  1311 00000ADA FB                      sti
+  1312 00000ADB B8004C                  mov ax,0x4c00
+  1313 00000ADE CD21                    int 0x21
   1314                                  section .data
   1315                                  ;	  ax,bx,cx,dx,di,si,bp,sp,ss,ds,es,ip,cs,flags
   1316 00000000 0000<rep 200h>          pcb: times 32*16 dw 0

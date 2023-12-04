@@ -1010,35 +1010,43 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				;send DSP command 10h
-				mov dx, 22ch
-				mov al,10h
-				out dx,al
-				;send byte audio sample
-				mov si,[sound_index]
-				mov al,[es:si]
-				out dx,al
-				add word[sound_index],1
-				  mov cx,5500
-				   sounddelay:
-				   loop sounddelay
-				  mov dx,[sound_size]
-				cmp word[sound_index],dx
-				jne soundskip
-				mov word[sound_index],0
-				soundskip:
+				; cmp word[ispaused],1
+				; je soundloop
+				; ;send DSP command 10h
+				; mov dx, 22ch
+				; mov al,10h
+				; out dx,al
+				; ;send byte audio sample
+				; mov si,[sound_index]
+				; mov al,[es:si]
+				; out dx,al
+				; add word[sound_index],1
+				  ; mov cx,5500
+				   ; sounddelay:
+				   ; loop sounddelay
+				  ; mov dx,[sound_size]
+				; cmp word[sound_index],dx
+				; jne soundskip
+				; mov word[sound_index],0
+				; soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
 			cmp byte[gamestate],1           ;only do keyboard interrupt override when gamestate is 1
 			jne nomatch
 			in al, 0x60						; read a char from keyboard port, scancode
+			cmp al, 0x81					; is the key escape
+			je pausegame
 			cmp al, 0x48					; is the key up
-			jne nomatch						; leave interrupt routine 
+			jne nomatch						; leave interrupt routine
+						
 			cmp byte[rabbitstate],0
 			jne nomatch
 			mov byte[rabbitstate],1
-            
+			jmp nomatch
+pausegame:
+			call pausescreen
+			jmp nomatch
 nomatch:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
 			pop ax
@@ -1075,6 +1083,8 @@ StartTimer:
 GameTimer:
 			push ax
 			;check if current brick is blue and if it is then increment both timers
+			cmp word[ispaused],1
+			je timerskip
 			cmp byte[iscurrbrickblue],1
 			jne timerskip
 			mov ax,[bluebricktime]
@@ -1143,6 +1153,56 @@ EndTimer:
 			je GameTimer
 			pop ds
 			iret 
+;--------------------------------------------------------------------
+printpausescreen:
+			pusha
+			push es
+			
+			mov ax,[buffer]
+			mov es,ax
+			
+			mov di,320*75+100
+			mov dx,60
+			pausescreenbox1:
+						mov si,di
+						add di,320
+						mov cx,130
+							pausescreenbox2:
+							mov byte[es:si],0xEC
+							add si,1
+							loop pausescreenbox2
+						sub dx,1
+						jnz pausescreenbox1
+			call printbuffer
+			pop es
+			popa
+			ret
+;--------------------------------------------------------------------
+pausescreen:
+			cmp word[ispaused],1
+			je pausescreenskip
+				mov word[ispaused],1
+					jmp pausescreenend
+			pausescreenskip:
+				mov word[ispaused],0
+				call clrbuffer
+			pausescreenend:
+			ret
+;--------------------------------------------------------------------
+clrbuffer:
+		pusha
+		push es	
+		mov ax,[buffer]
+		mov es,ax
+		xor di,di
+		mov cx,64000
+		clrscrloop:
+					mov byte[es:di],0x00
+					add di,1
+					loop clrscrloop
+		pop es
+		popa
+		ret
 ;--------------------------------------------------------------------
 endmsg: db 'You died...Your Score was:'
 printendmsg:
@@ -1266,15 +1326,21 @@ waitforstart:
         mov word [printmasky],47
 		mov ax,0
         mainloop:
-        	call printElements
-        	call animatebackground
-        	call GameChecks
-        	call printbuffer
-        	call printscore
-			cmp byte[gamestate],2
-			jne mainloop
-			inc ax
-			cmp ax,0x003F
+		;if game is paused then skip loop
+			cmp word[ispaused],1
+			jne mainlooppauseskip
+			call printpausescreen
+			jmp mainloop
+			mainlooppauseskip:
+				call printElements
+				call animatebackground
+				call GameChecks
+				call printbuffer
+				call printscore
+				cmp byte[gamestate],2
+				jne mainloop
+				inc ax
+				cmp ax,0x003F
 			je ending
         jmp mainloop
 ;unhook all buffers to return control to system
@@ -1297,6 +1363,7 @@ sti
 mov ax,0x4c00
 int 0x21
 section .data
+ispaused:dw 0
 ;	  ax,bx,cx,dx,di,si,bp,sp,ss,ds,es,ip,cs,flags
 pcb: times 32*16 dw 0
 currenttask:dw 0
