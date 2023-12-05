@@ -1036,8 +1036,8 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				cmp word[ispaused],1
-				je soundloop
+				cmp word[ispaused],0
+				jne soundloop
 				;send DSP command 10h
 				mov dx, 22ch
 				mov al,10h
@@ -1063,6 +1063,8 @@ kbisr:		push ax
 			in al, 0x60						; read a char from keyboard port, scancode
 			cmp al, 0x81					; is the key escape
 			je pausegame
+			cmp al, 0x90                        ; is the key Q
+			je endgame
 			cmp al, 0x48					; is the key up
 			jne nomatch						; leave interrupt routine
 						
@@ -1072,7 +1074,12 @@ kbisr:		push ax
 			jmp nomatch
 pausegame:
 			call pausescreen
-			mov al, 0x20
+			jmp exitkbisr
+endgame:
+			call pausescreen
+			mov word[ispaused],2
+
+exitkbisr:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
 			pop ax
 			iret
@@ -1186,6 +1193,7 @@ EndTimer:
 ;--------------------------------------------------------------------
 pausemsg1:db 'Game Paused'
 pausemsg2:db 'Press ESC to Unpause'
+pausemsg3:db 'Press Q to Exit'
 printpausescreen:
 			pusha
 			push es
@@ -1222,6 +1230,11 @@ printpausescreen:
 			mov dl,11;x coordinate
 			mov bp,pausemsg2;mov bp the offset of the string
 			int 10h		
+			mov cx,15;length of string
+			mov dh,15;y coordinate
+			mov dl,12;x coordinate
+			mov bp,pausemsg3;mov bp the offset of the string
+			int 10h	
 			printpausescreenend:
 			pop es
 			popa
@@ -1369,11 +1382,13 @@ waitforstart:
 		mov ax,0
         mainloop:
 		;if game is paused then skip loop
-			cmp word[ispaused],0
-			je mainlooppauseskip
+			cmp word[ispaused],1
+			jne mainlooppauseskip
 				call printpausescreen
 				jmp mainloop
 			mainlooppauseskip:
+			cmp word[ispaused],2
+			je ending
 				call printElements
 				call animatebackground
 				call GameChecks
@@ -1383,14 +1398,14 @@ waitforstart:
 				jne mainloop
 				inc ax
 				cmp ax,0x003F
-			je ending
+				je ending
         jmp mainloop
 ;unhook all buffers to return control to system
 ending:
 mov byte[gamestate],3
+
 call endscreen
 call printendmsg
-
 xor ax,ax
 mov es,ax
 cli
@@ -1403,6 +1418,7 @@ mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
 mov word [es:1ch*4+2],ax
 sti
+
 call delay
 mov ax,0003h
 int 0x10
