@@ -118,7 +118,7 @@ ret 8
 delay:
 	push cx
 	push bx
-	mov bx,0x0FFF
+	mov bx,0x1FFF
 	delayloop:
 	mov cx,0xFFFF
 	delayloop1:
@@ -857,7 +857,10 @@ GameChecks:
 								cmp word[bluebricktimer],ax
 								jc bluebrickcheckskip
 									mov byte[iscurrbrickblue],0
-									mov byte[brick4col],0x0B
+									push ax
+									mov ah,[bottomcol]
+									mov byte[brick4col],ah
+									pop ax
 									mov word[bluebricktimer],0
 									mov byte[rabbitstate],4
 									mov byte[gamestate], 2
@@ -1033,25 +1036,25 @@ soundtask:
 			mov dx,[sound_buffer]
 			mov es,dx
 			soundloop:	
-				; cmp word[ispaused],1
-				; je soundloop
-				; ;send DSP command 10h
-				; mov dx, 22ch
-				; mov al,10h
-				; out dx,al
-				; ;send byte audio sample
-				; mov si,[sound_index]
-				; mov al,[es:si]
-				; out dx,al
-				; add word[sound_index],1
-				  ; mov cx,5500
-				   ; sounddelay:
-				   ; loop sounddelay
-				  ; mov dx,[sound_size]
-				; cmp word[sound_index],dx
-				; jne soundskip
-				; mov word[sound_index],0
-				; soundskip:
+				cmp word[ispaused],1
+				je soundloop
+				;send DSP command 10h
+				mov dx, 22ch
+				mov al,10h
+				out dx,al
+				;send byte audio sample
+				mov si,[sound_index]
+				mov al,[es:si]
+				out dx,al
+				add word[sound_index],1
+				  mov cx,5500
+				   sounddelay:
+				   loop sounddelay
+				  mov dx,[sound_size]
+				cmp word[sound_index],dx
+				jne soundskip
+				mov word[sound_index],0
+				soundskip:
 			jmp soundloop
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 kbisr:		push ax
@@ -1069,6 +1072,11 @@ kbisr:		push ax
 			jmp nomatch
 pausegame:
 			call pausescreen
+			mov al, 0x20
+			out 0x20, al					; send EOI to PIC
+			pop ax
+			iret
+			
 nomatch:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
 			pop ax
@@ -1382,6 +1390,7 @@ ending:
 mov byte[gamestate],3
 call endscreen
 call printendmsg
+
 xor ax,ax
 mov es,ax
 cli
@@ -1394,6 +1403,9 @@ mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
 mov word [es:1ch*4+2],ax
 sti
+call delay
+mov ax,0003h
+int 0x10
 mov ax,0x4c00
 int 0x21
 section .data
