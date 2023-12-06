@@ -1,7 +1,0 @@
-     1                                  [org 0x0100]
-     2                                  
-     3 00000000 B8FFFF                  mov ax,0xFFFF
-     4                                  push ah
-     4          ******************       error: invalid combination of opcode and operands
-     5 00000003 B8004C                  mov ax,0x4c00
-     6 00000006 CD21                    int 0x21
