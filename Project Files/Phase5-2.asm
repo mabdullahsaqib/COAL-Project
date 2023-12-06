@@ -953,6 +953,7 @@ readimages:
 			lea dx,startfilename
 			int 21h
 			mov [startfilehandle],ax
+			
 			;read file and write bytes to 
 			 mov ah,3fh
 			 mov cx,64000
@@ -961,6 +962,7 @@ readimages:
 			 mov ds,dx
 			 xor dx,dx
 			 int 21h
+			 
 			 ;close file
 			mov ax,cs
 			mov ds,ax
@@ -1065,6 +1067,7 @@ kbisr:		push ax
 			je pausegame
 			cmp al, 0x90                        ; is the key Q
 			je endgame
+			
 			cmp al, 0x48					; is the key up
 			jne nomatch						; leave interrupt routine
 						
@@ -1078,7 +1081,6 @@ pausegame:
 endgame:
 			call pausescreen
 			mov word[ispaused],2
-
 exitkbisr:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
 			pop ax
@@ -1406,13 +1408,15 @@ mov byte[gamestate],3
 
 call endscreen
 call printendmsg
+
+cli
 xor ax,ax
 mov es,ax
-cli
 mov ax,[keyboardinterrupt]
 mov word [es:9*4],ax
 mov ax,[keyboardinterrupt+2]
 mov word [es:9*4+2],ax
+
 mov ax,[timerinterrupt]
 mov word [es:1ch*4],ax
 mov ax,[timerinterrupt+2]
@@ -1420,8 +1424,10 @@ mov word [es:1ch*4+2],ax
 sti
 
 call delay
+
 mov ax,0003h
 int 0x10
+
 mov ax,0x4c00
 int 0x21
 section .data
@@ -1436,7 +1442,6 @@ keyboardinterrupt:dw 0,0
 timerinterrupt:dw 0,0
 printmasky:dw 0
 gamestate: db 0
-
 startScreenBlinkInterval:dw 0x2FFF
 startScreenTick:dw 0
 
