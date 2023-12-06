@@ -1079,6 +1079,8 @@ pausegame:
 			call pausescreen
 			jmp exitkbisr
 endgame:
+			cmp word[ispaused],1
+			jne exitkbisr
 			call pausescreen
 			mov word[ispaused],2
 exitkbisr:	mov al, 0x20
@@ -1089,7 +1091,8 @@ exitkbisr:	mov al, 0x20
 nomatch:	mov al, 0x20
 			out 0x20, al					; send EOI to PIC
 			pop ax
-			jmp far[cs:keyboardinterrupt]
+			iret
+			;jmp far[cs:keyboardinterrupt]
 ;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------					  			
 timer:		
 			push ds
@@ -1322,7 +1325,8 @@ start:
         int 0x10
 		call readimages    
         cli						; disable interrupts
-
+		xor ax,ax
+		mov es,ax
 		mov word[pcb+32+16],soundtask
 		mov word[pcb+32+18],cs
 		mov word[pcb+32+26],0x0200
@@ -1341,14 +1345,7 @@ start:
 									;second stack then starts from 6800:FFFF and goes backwards
 		mov word[pcb+32+24],es
 		mov word[currenttask],0
-		xor ax, ax
-		mov es, ax					; es=0, point es to IVT base
-		mov ax,[es:9*4]
-		mov word[keyboardinterrupt],ax
-		mov ax,[es:9*4+2]
-		mov word[keyboardinterrupt+2],ax
-		mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
-		mov [es:9*4+2], cs			; store segment at n*4+2
+	
 		
 		mov ax,[es:1ch*4]
 		mov word [timerinterrupt],ax
@@ -1372,6 +1369,15 @@ waitforstart:
         int 0x16
 		cmp ah,0x12
 		jne waitforstart
+			xor ax, ax
+		mov es, ax					; es=0, point es to IVT base
+		mov ax,[es:9*4]
+		mov word[keyboardinterrupt],ax
+		mov ax,[es:9*4+2]
+		mov word[keyboardinterrupt+2],ax
+		mov word [es:9*4], kbisr		; store offset at n*4....... csabc:kbisr	
+		mov [es:9*4+2], cs			; store segment at n*4+2
+		
 		mov byte[gamestate], 1
         mov ax,[carrotposy]
         mov word [carrotoriginalpos],ax
@@ -1396,11 +1402,11 @@ waitforstart:
 				call GameChecks
 				call printbuffer
 				call printscore
-				cmp byte[gamestate],2
-				jne mainloop
-				inc ax
-				cmp ax,0x003F
-				je ending
+					cmp byte[gamestate],2
+					jne mainloop
+					inc ax
+					cmp ax,0x003F
+					je ending
         jmp mainloop
 ;unhook all buffers to return control to system
 ending:
