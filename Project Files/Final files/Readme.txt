@@ -1,0 +1,2 @@
+The asm file won't compile right away as file names cant be longer than 8 characters, so file will need to be renamed.
+The txt and wav files are needed for the sound and start/end screens as .com files are limited to 64kb so the start/end screens and sound are read using file handling.
